@@ -1,5 +1,6 @@
 #include "apps.h"
 #include "console.h"
+#include <stdint.h>
 
 ConsoleApp apps[MAX_APPS];
 int app_count = 0;
@@ -82,6 +83,4 @@ void hello_app() {
 }
 
 // clear App
-void clear_app() {
-  console_clear();
-}
+void clear_app() { console_clear(); }

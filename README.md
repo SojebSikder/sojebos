@@ -1,5 +1,9 @@
 ## Description
-Simple os created from scratch and with grub bootloader
+SojebOS is a basic operating system
+
+## Screenshots
+![Screenshot](./screenshots/screenshot1.png)
+
 
 ## Build Instructions
 ```bash
