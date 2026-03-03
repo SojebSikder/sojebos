@@ -7,8 +7,9 @@ void __attribute__((section(".text.kernel_main"))) kernel_main() {
   console_print("Type app number to launch or 'exit' to quit\n\n");
 
   // Register apps
-  register_app("Calculator", calculator_app);
   register_app("Hello", hello_app);
+  register_app("Calculator", calculator_app);
+  register_app("Clear", clear_app);
 
   char input[16];
   while (1) {

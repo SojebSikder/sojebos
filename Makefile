@@ -4,13 +4,13 @@ LD = ld
 CFLAGS = -ffreestanding -m32 -Wall -Wextra -O2
 LDFLAGS = -m elf_i386 -T linker.ld
 
-# Sources
-SRCS_C = kernel.c console.c apps.c
-SRCS_S = entry.S
+# Sources (now in src/)
+SRCS_C = $(wildcard src/*.c)
+SRCS_S = $(wildcard src/*.S)
 
-# Objects
-OBJS_C = $(SRCS_C:.c=.o)
-OBJS_S = $(SRCS_S:.S=.o)
+# Objects (put objects in build/ directory)
+OBJS_C = $(patsubst src/%.c, build/%.o, $(SRCS_C))
+OBJS_S = $(patsubst src/%.S, build/%.o, $(SRCS_S))
 OBJS = $(OBJS_C) $(OBJS_S)
 
 # Kernel binary
@@ -31,11 +31,13 @@ $(KERNEL_BIN): $(OBJS)
 	$(LD) $(LDFLAGS) -o $@ $^
 
 # Compile C sources
-%.o: %.c
+build/%.o: src/%.c
+	@mkdir -p build
 	$(CC) $(CFLAGS) -c $< -o $@
 
 # Compile assembly sources
-%.o: %.S
+build/%.o: src/%.S
+	@mkdir -p build
 	$(CC) $(CFLAGS) -c $< -o $@
 
 # Build ISO
@@ -52,4 +54,4 @@ run: $(ISO_IMG)
 
 # Clean build artifacts
 clean:
-	rm -rf $(OBJS) $(KERNEL_BIN) $(ISO_DIR) $(ISO_IMG)
+	rm -rf build $(OBJS) $(KERNEL_BIN) $(ISO_DIR) $(ISO_IMG)

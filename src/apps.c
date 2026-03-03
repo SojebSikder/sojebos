@@ -80,3 +80,8 @@ void hello_app() {
     console_print("\n");
   }
 }
+
+// clear App
+void clear_app() {
+  console_clear();
+}

@@ -17,5 +17,7 @@ void register_app(const char *name, AppFunc func);
 // Predefined apps
 void calculator_app();
 void hello_app();
+void clear_app();
+
 
 #endif
