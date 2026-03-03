@@ -1,5 +1,5 @@
 ## Description
-Simple os created from scratch
+Simple os created from scratch and with grub bootloader
 
 ## Build Instructions
 ```bash

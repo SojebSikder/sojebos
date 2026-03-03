@@ -1,12 +1,18 @@
-ENTRY(kernel_main)
+ENTRY(_start)
 
 SECTIONS
 {
-    . = 0x1000;
-    .text : {
-        *(.text.kernel_main) /* Force kernel_main to be FIRST */
-        *(.text*)
+    /* The kernel usually lives at 1MB */
+    . = 1M;
+
+    /* First and most important: the Multiboot header */
+    .text :
+    {
+        *(.multiboot)
+        *(.text)
     }
-    .data : { *(.data*) }
-    .bss  : { *(.bss*)  }
+
+    .rodata : { *(.rodata) }
+    .data   : { *(.data) }
+    .bss    : { *(.bss)  }
 }
