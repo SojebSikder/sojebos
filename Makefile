@@ -1,34 +1,46 @@
+# Compiler and linker
 CC = gcc
 LD = ld
 CFLAGS = -ffreestanding -m32 -Wall -Wextra -O2
 LDFLAGS = -m elf_i386 -T linker.ld
 
-KERNEL_C = kernel.c
-ENTRY_S = entry.S
-KERNEL_O = kernel.o
-ENTRY_O = entry.o
+# Sources
+SRCS_C = kernel.c console.c apps.c
+SRCS_S = entry.S
+
+# Objects
+OBJS_C = $(SRCS_C:.c=.o)
+OBJS_S = $(SRCS_S:.S=.o)
+OBJS = $(OBJS_C) $(OBJS_S)
+
+# Kernel binary
 KERNEL_BIN = kernel.bin
 
+# ISO
 ISO_DIR = iso
 ISO_IMG = sojeb-os.iso
 GRUB_CFG = boot/grub/grub.cfg
 
 .PHONY: all run clean
 
+# Default target
 all: $(ISO_IMG)
 
-# Build kernel
-$(KERNEL_BIN): $(ENTRY_O) $(KERNEL_O)
-	$(LD) $(LDFLAGS) -o $(KERNEL_BIN) $(ENTRY_O) $(KERNEL_O)
+# Link kernel
+$(KERNEL_BIN): $(OBJS)
+	$(LD) $(LDFLAGS) -o $@ $^
 
-$(KERNEL_O): $(KERNEL_C)
-	$(CC) $(CFLAGS) -c $(KERNEL_C) -o $(KERNEL_O)
+# Compile C sources
+%.o: %.c
+	$(CC) $(CFLAGS) -c $< -o $@
 
-$(ENTRY_O): $(ENTRY_S)
-	$(CC) $(CFLAGS) -c $(ENTRY_S) -o $(ENTRY_O)
+# Compile assembly sources
+%.o: %.S
+	$(CC) $(CFLAGS) -c $< -o $@
 
 # Build ISO
 $(ISO_IMG): $(KERNEL_BIN) $(GRUB_CFG)
+	@echo "Creating ISO..."
 	mkdir -p $(ISO_DIR)/boot/grub
 	cp $(KERNEL_BIN) $(ISO_DIR)/boot/
 	cp $(GRUB_CFG) $(ISO_DIR)/boot/grub/
@@ -36,8 +48,8 @@ $(ISO_IMG): $(KERNEL_BIN) $(GRUB_CFG)
 
 # Run in QEMU
 run: $(ISO_IMG)
-	qemu-system-i386 -cdrom $(ISO_IMG)
+	qemu-system-i386 -cdrom $(ISO_IMG) -m 512M
 
-# Clean
+# Clean build artifacts
 clean:
-	rm -rf $(KERNEL_O) $(ENTRY_O) $(KERNEL_BIN) $(ISO_DIR) $(ISO_IMG)
+	rm -rf $(OBJS) $(KERNEL_BIN) $(ISO_DIR) $(ISO_IMG)
