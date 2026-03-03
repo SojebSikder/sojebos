@@ -31,17 +31,38 @@ unsigned char get_scancode() {
   return inb(0x60);
 }
 
-// Console Functions
-void console_putchar(char c) {
-  if (c == '\n')
-    console.cursor += CONSOLE_WIDTH - (console.cursor % CONSOLE_WIDTH);
-  else if (c == '\b') {
-    if (console.cursor > 0) {
-      console.cursor--;
-      video[console.cursor] = (WHITE_ON_BLACK << 8) | ' ';
+// Scroll the screen up by one line
+static void scroll_up() {
+    for(int y = 1; y < CONSOLE_HEIGHT; y++) {
+        for(int x = 0; x < CONSOLE_WIDTH; x++) {
+            video[(y-1)*CONSOLE_WIDTH + x] = video[y*CONSOLE_WIDTH + x];
+        }
     }
-  } else
-    video[console.cursor++] = (WHITE_ON_BLACK << 8) | c;
+    // Clear the last line
+    for(int x = 0; x < CONSOLE_WIDTH; x++) {
+        video[(CONSOLE_HEIGHT-1)*CONSOLE_WIDTH + x] = (WHITE_ON_BLACK << 8) | ' ';
+    }
+}
+
+
+// Console Functions
+void console_putchar(char c){
+    if(c=='\n') {
+        console.cursor += CONSOLE_WIDTH - (console.cursor % CONSOLE_WIDTH);
+    } else if(c=='\b') {
+        if(console.cursor>0){
+            console.cursor--;
+            video[console.cursor] = (WHITE_ON_BLACK << 8) | ' ';
+        }
+    } else {
+        video[console.cursor++] = (WHITE_ON_BLACK << 8) | c;
+    }
+
+    // Scroll if cursor goes beyond the last line
+    if(console.cursor >= CONSOLE_WIDTH * CONSOLE_HEIGHT){
+        scroll_up();
+        console.cursor -= CONSOLE_WIDTH;
+    }
 }
 
 void console_print(const char *str) {
