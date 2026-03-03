@@ -4,8 +4,8 @@
 
 void __attribute__((section(".text.kernel_main"))) kernel_main() {
   console_clear();
-  console_print("Welcome SojebOS\n");
-  console_print("Type app number to launch or 'exit' to quit\n\n");
+  console_print("Welcome to SojebOS\n");
+  console_print("Type app name to launch or 'exit' to quit\n\n");
 
   // Register apps
   register_app("hello", hello_app);
@@ -23,7 +23,6 @@ void __attribute__((section(".text.kernel_main"))) kernel_main() {
     console_print("> ");
     console_read_line(input, 32);
 
-    // Check for exit
     if (strcmp(input, "exit") == 0) {
       console_print("Exiting SojebOS shell...\n");
       break;
