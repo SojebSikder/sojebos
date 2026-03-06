@@ -42,6 +42,6 @@ void __attribute__((section(".text.kernel_main"))) kernel_main() {
       console_print("Command not found!\n");
     }
 
-    console_print("\nReturning to shell...\n\n");
+    // console_print("\nReturning to shell...\n\n");
   }
 }

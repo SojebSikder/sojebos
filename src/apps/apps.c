@@ -1,6 +1,8 @@
+#include <stdint.h>
 #include "apps.h"
 #include "../drivers/console.h"
-#include <stdint.h>
+#include "../lib/string.h"
+
 
 ConsoleApp apps[MAX_APPS];
 int app_count = 0;
@@ -23,12 +25,12 @@ void calculator_app() {
     if (input[0] == 'e' && input[1] == 'x' && input[2] == 'i' &&
         input[3] == 't')
       return;
-    int a = atoi_simple(input);
+    int a = atoi(input);
     const char *op_ptr = input;
     while (*op_ptr && (*op_ptr >= '0' && *op_ptr <= '9'))
       op_ptr++;
     char op = *op_ptr;
-    int b = atoi_simple(op_ptr + 1);
+    int b = atoi(op_ptr + 1);
     int result = 0;
     switch (op) {
     case '+':

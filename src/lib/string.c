@@ -9,8 +9,8 @@ int strcmp(const char *s1, const char *s2) {
     return s1[i] - s2[i];
 }
 
-// Simple atoi
-int atoi_simple(const char *str) {
+// atoi
+int atoi(const char *str) {
   int result = 0;
   while (*str >= '0' && *str <= '9') {
     result = result * 10 + (*str - '0');

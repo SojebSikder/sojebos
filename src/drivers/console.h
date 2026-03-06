@@ -21,6 +21,5 @@ void console_putchar(char c);
 void console_print(const char *str);
 char console_get_char();
 void console_read_line(char *buffer, int max_len);
-int atoi_simple(const char *str);
 
 #endif
