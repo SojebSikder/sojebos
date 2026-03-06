@@ -1,6 +1,6 @@
-#include "apps.h"
-#include "console.h"
-#include "string.h"
+#include "../apps/apps.h"
+#include "../drivers/console.h"
+#include "../lib/string.h"
 
 void __attribute__((section(".text.kernel_main"))) kernel_main() {
   console_clear();

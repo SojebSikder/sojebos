@@ -117,13 +117,3 @@ void console_read_line(char *buffer, int max_len) {
     }
   }
 }
-
-// Simple atoi
-int atoi_simple(const char *str) {
-  int result = 0;
-  while (*str >= '0' && *str <= '9') {
-    result = result * 10 + (*str - '0');
-    str++;
-  }
-  return result;
-}
