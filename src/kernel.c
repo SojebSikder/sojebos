@@ -9,7 +9,7 @@ void __attribute__((section(".text.kernel_main"))) kernel_main() {
 
   // Register apps
   register_app("hello", hello_app);
-  register_app("calculator", calculator_app);
+  register_app("calc", calculator_app);
   register_app("clear", clear_app);
 
   char input[32];
