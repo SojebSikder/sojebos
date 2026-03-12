@@ -2,6 +2,7 @@
 #include "../apps/calc.h"
 #include "../apps/hello.h"
 #include "../apps/clear.h"
+#include "../apps/coreutils.h"
 
 ConsoleApp apps[MAX_APPS];
 int app_count = 0;
@@ -18,4 +19,5 @@ void register_all_apps(){
     register_app("hello", hello_app);
     register_app("calc", calculator_app);
     register_app("clear", clear_app);
+    register_app("ls", ls_app);
 }

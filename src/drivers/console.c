@@ -1,4 +1,6 @@
 #include "console.h"
+#include "../kernel/io.h"
+
 
 // Video Memory
 volatile uint16_t *video = (uint16_t *)VIDEO_MEMORY;
@@ -17,13 +19,6 @@ static char scancode_map_shift[] = {
     'O', 'P', '{',  '}',  '\n', 0,   'A', 'S', 'D', 'F', 'G', 'H',
     'J', 'K', 'L',  ':',  '"',  '~', 0,   '|', 'Z', 'X', 'C', 'V',
     'B', 'N', 'M',  '<',  '>',  '?', 0,   '*', 0,   ' '};
-
-// Low-level I/O
-unsigned char inb(unsigned short port) {
-  unsigned char result;
-  __asm__ volatile("inb %1,%0" : "=a"(result) : "Nd"(port));
-  return result;
-}
 
 unsigned char get_scancode() {
   while (!(inb(0x64) & 1))

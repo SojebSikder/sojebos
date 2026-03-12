@@ -2,3 +2,5 @@
 *.o
 iso
 *.iso
+disk
+*.img

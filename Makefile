@@ -48,9 +48,41 @@ $(ISO_IMG): $(KERNEL_BIN) $(GRUB_CFG)
 	cp $(GRUB_CFG) $(ISO_DIR)/boot/grub/
 	grub-mkrescue -o $(ISO_IMG) $(ISO_DIR)
 
+
+# Variables
+DISK_IMG = disk.img
+SOURCE_DIR = disk
+
+# Mark targets that aren't actual files
+.PHONY: createdisk addfiles cleandisk
+
+# Create the disk only if it doesn't exist
+$(DISK_IMG):
+	@echo "Creating 64MB blank FAT32 disk image..."
+	dd if=/dev/zero of=$(DISK_IMG) bs=1M count=64
+	mkfs.vfat -F 32 $(DISK_IMG)
+
+createdisk: $(DISK_IMG)
+
+# Add files from the host 'disk' directory to the image root
+addfiles: $(DISK_IMG)
+	@echo "Copying contents of $(SOURCE_DIR) to $(DISK_IMG)..."
+	@if [ -d $(SOURCE_DIR) ]; then \
+		mcopy -i $(DISK_IMG) -s $(SOURCE_DIR)/* ::/; \
+	else \
+		echo "Error: Directory $(SOURCE_DIR) not found."; \
+	fi
+
+cleandisk:
+	rm -f $(DISK_IMG)
+
+
+
+
 # Run in QEMU
 run: $(ISO_IMG)
-	qemu-system-i386 -cdrom $(ISO_IMG) -m 512M
+	# qemu-system-i386 -cdrom $(ISO_IMG) -m 512M
+	qemu-system-i386 -boot d -cdrom $(ISO_IMG) -drive format=raw,file=$(DISK_IMG) -m 512M
 
 # Clean build artifacts
 clean:
