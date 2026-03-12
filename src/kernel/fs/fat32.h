@@ -43,5 +43,6 @@ typedef struct {
 
 void fat32_init();
 void fat32_list_root();
+void fat32_cat(const char* filename);
 
 #endif

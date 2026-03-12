@@ -1,7 +1,7 @@
 #ifndef APPS_H
 #define APPS_H
 
-typedef void (*AppFunc)();
+typedef void (*AppFunc)(int argc, char *argv[]);
 
 typedef struct {
   const char *name;

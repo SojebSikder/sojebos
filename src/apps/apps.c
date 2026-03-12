@@ -20,4 +20,5 @@ void register_all_apps(){
     register_app("calc", calculator_app);
     register_app("clear", clear_app);
     register_app("ls", ls_app);
+    register_app("cat", cat_app);
 }
