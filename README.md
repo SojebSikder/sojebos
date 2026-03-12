@@ -4,6 +4,12 @@ SojebOS is a basic operating system
 ## Screenshots
 ![Screenshot](./screenshots/screenshot1.png)
 
+## Features
+- coreutils: ls, cat, clear
+- utils: calculator
+- fat32 filesystem
+- Many more and many more to come...
+
 
 ## Build Instructions
 ```bash
