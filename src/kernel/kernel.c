@@ -1,6 +1,7 @@
 #include "../apps/apps.h"
 #include "../drivers/console.h"
-#include "../lib/string.h"
+#include "./libc/string.h"
+
 
 void __attribute__((section(".text.kernel_main"))) kernel_main() {
   console_clear();
@@ -8,9 +9,7 @@ void __attribute__((section(".text.kernel_main"))) kernel_main() {
   console_print("Type app name to launch or 'exit' to quit\n\n");
 
   // Register apps
-  register_app("hello", hello_app);
-  register_app("calc", calculator_app);
-  register_app("clear", clear_app);
+  register_all_apps();
 
   char input[32];
   while (1) {
@@ -41,7 +40,5 @@ void __attribute__((section(".text.kernel_main"))) kernel_main() {
     if (!found) {
       console_print("Command not found!\n");
     }
-
-    // console_print("\nReturning to shell...\n\n");
   }
 }
