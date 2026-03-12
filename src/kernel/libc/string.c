@@ -18,3 +18,24 @@ int atoi(const char *str) {
   }
   return result;
 }
+
+
+// to lower case
+char *strlower(char *str) {
+  for (int i = 0; str[i] != '\0'; i++) {
+    if (str[i] >= 'A' && str[i] <= 'Z') {
+      str[i] = str[i] + 32;
+    }
+  }
+  return str;
+}
+
+// to upper case
+char *strupper(char *str) {
+  for (int i = 0; str[i] != '\0'; i++) {
+    if (str[i] >= 'a' && str[i] <= 'z') {
+      str[i] = str[i] - 32;
+    }
+  }
+  return str;
+}
