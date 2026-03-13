@@ -4,10 +4,18 @@
 #include "./libc/string.h"
 
 void __attribute__((section(".text.kernel_main"))) kernel_main() {
+  // init file system
   vfs_init();
   console_clear();
+  console_print("\n");
+  console_print("   _____   ____       _  ______ ____   ____   _____ \n");
+  console_print("  / ____| / __ \\     | ||  ____|  _ \\ / __ \\ / ____|\n");
+  console_print(" | (___  | |  | |    | || |__  | |_) | |  | | (___  \n");
+  console_print("  \\___ \\ | |  | | _  | ||  __| |  _ <| |  | |\\___ \\ \n");
+  console_print("  ____) || |__| || |_| || |____| |_) | |__| |____) |\n");
+  console_print(" |_____/  \\____/  \\___/ |______|____/ \\____/|_____/ \n");
+  console_print("\n");
   console_print("Welcome to SojebOS\n");
-  console_print("Type app name to launch or 'exit' to quit\n\n");
 
   // Register apps
   register_all_apps();
@@ -16,12 +24,6 @@ void __attribute__((section(".text.kernel_main"))) kernel_main() {
   char *argv[10]; // support up to 10 arguments
 
   while (1) {
-    console_print("Apps:\n");
-    for (int i = 0; i < app_count; i++) {
-      console_print("  ");
-      console_print(apps[i].name);
-      console_print("\n");
-    }
     console_print("> ");
     console_read_line(input, 64);
 
@@ -31,10 +33,12 @@ void __attribute__((section(".text.kernel_main"))) kernel_main() {
 
     while (*ptr != '\0' && argc < 10) {
       // Skip leading spaces
-      while (*ptr == ' ')
+      while (*ptr == ' ') {
         ptr++;
-      if (*ptr == '\0')
+      }
+      if (*ptr == '\0') {
         break;
+      }
 
       argv[argc++] = ptr;
 

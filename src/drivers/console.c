@@ -1,7 +1,6 @@
 #include "console.h"
 #include "../kernel/io.h"
 
-
 // Video Memory
 volatile uint16_t *video = (uint16_t *)VIDEO_MEMORY;
 Console console = {0, 0};
@@ -28,46 +27,48 @@ unsigned char get_scancode() {
 
 // Scroll the screen up by one line
 static void scroll_up() {
-    for(int y = 1; y < CONSOLE_HEIGHT; y++) {
-        for(int x = 0; x < CONSOLE_WIDTH; x++) {
-            video[(y-1)*CONSOLE_WIDTH + x] = video[y*CONSOLE_WIDTH + x];
-        }
+  for (int y = 1; y < CONSOLE_HEIGHT; y++) {
+    for (int x = 0; x < CONSOLE_WIDTH; x++) {
+      video[(y - 1) * CONSOLE_WIDTH + x] = video[y * CONSOLE_WIDTH + x];
     }
-    // Clear the last line
-    for(int x = 0; x < CONSOLE_WIDTH; x++) {
-        video[(CONSOLE_HEIGHT-1)*CONSOLE_WIDTH + x] = (WHITE_ON_BLACK << 8) | ' ';
-    }
+  }
+  // Clear the last line
+  for (int x = 0; x < CONSOLE_WIDTH; x++) {
+    video[(CONSOLE_HEIGHT - 1) * CONSOLE_WIDTH + x] =
+        (WHITE_ON_BLACK << 8) | ' ';
+  }
 }
 
-
 // Console Functions
-void console_putchar(char c){
-    if(c=='\n') {
-        console.cursor += CONSOLE_WIDTH - (console.cursor % CONSOLE_WIDTH);
-    } else if(c=='\b') {
-        if(console.cursor>0){
-            console.cursor--;
-            video[console.cursor] = (WHITE_ON_BLACK << 8) | ' ';
-        }
-    } else {
-        video[console.cursor++] = (WHITE_ON_BLACK << 8) | c;
+void console_putchar(char c) {
+  if (c == '\n') {
+    console.cursor += CONSOLE_WIDTH - (console.cursor % CONSOLE_WIDTH);
+  } else if (c == '\b') {
+    if (console.cursor > 0) {
+      console.cursor--;
+      video[console.cursor] = (WHITE_ON_BLACK << 8) | ' ';
     }
+  } else {
+    video[console.cursor++] = (WHITE_ON_BLACK << 8) | c;
+  }
 
-    // Scroll if cursor goes beyond the last line
-    if(console.cursor >= CONSOLE_WIDTH * CONSOLE_HEIGHT){
-        scroll_up();
-        console.cursor -= CONSOLE_WIDTH;
-    }
+  // Scroll if cursor goes beyond the last line
+  if (console.cursor >= CONSOLE_WIDTH * CONSOLE_HEIGHT) {
+    scroll_up();
+    console.cursor -= CONSOLE_WIDTH;
+  }
 }
 
 void console_print(const char *str) {
-  while (*str)
+  while (*str) {
     console_putchar(*str++);
+  }
 }
 
 void console_clear() {
-  for (int i = 0; i < CONSOLE_WIDTH * CONSOLE_HEIGHT; i++)
+  for (int i = 0; i < CONSOLE_WIDTH * CONSOLE_HEIGHT; i++) {
     video[i] = (WHITE_ON_BLACK << 8) | ' ';
+  }
   console.cursor = 0;
 }
 
@@ -82,13 +83,15 @@ char console_get_char() {
       console.shift_pressed = 0;
       continue;
     }
-    if (sc & 0x80)
+    if (sc & 0x80) {
       continue;
+    }
     if (sc < 58) {
       char c =
           console.shift_pressed ? scancode_map_shift[sc] : scancode_map[sc];
-      if (c)
+      if (c) {
         return c;
+      }
     }
   }
 }
