@@ -1,3 +1,5 @@
+#include <stddef.h>
+
 int strcmp(const char *s1, const char *s2) {
     int i = 0;
     while (s1[i] != '\0' && s2[i] != '\0') {
@@ -38,4 +40,14 @@ char *strupper(char *str) {
     }
   }
   return str;
+}
+
+
+// strlen
+size_t strlen(const char *str) {
+    size_t i = 0;
+    while (str[i] != '\0') {
+        i++;
+    }
+    return i;
 }

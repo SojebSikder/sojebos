@@ -44,5 +44,10 @@ typedef struct {
 void fat32_init();
 void fat32_list_root();
 void fat32_cat(const char* filename);
+//
+// write file
+//
+void fat32_write_file(const char* filename, uint8_t* data, uint32_t size);
+void fat32_delete_file(const char* filename);
 
 #endif
