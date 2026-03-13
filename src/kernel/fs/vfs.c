@@ -23,3 +23,7 @@ void vfs_write(const char* name, uint8_t* data, uint32_t size) {
 void vfs_rm(const char* name) {
     fat32_delete_file(name);
 }
+
+void vfs_usage() {
+    fat32_show_usage();
+}

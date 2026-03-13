@@ -40,3 +40,7 @@ void rm_app(int argc, char *argv[]) {
   vfs_rm(filename);
   console_print("File deleted successfully!\n");
 }
+
+void disk_usage_app() {
+  vfs_usage();
+}

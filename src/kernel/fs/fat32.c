@@ -3,6 +3,7 @@
 #include "../libc/mem.h"
 #include "disk.h"
 #include <stdint.h>
+#include "../libc/string.h"
 
 extern void disk_read(uint32_t sector, uint8_t *buffer);
 
@@ -440,4 +441,37 @@ void fat32_delete_file(const char *filename) {
     // Move to the next cluster in the directory chain if needed
     cluster = fat32_next_cluster(cluster);
   }
+}
+
+void fat32_show_usage() {
+    uint8_t buffer[512];
+    uint32_t free_clusters = 0;
+    uint32_t fat_sector_start = fs.reserved_sector_count;
+
+    console_print("Scanning Disk... ");
+
+    for (uint32_t i = 0; i < fs.fat_size; i++) {
+        disk_read(fat_sector_start + i, buffer);
+        uint32_t *entries = (uint32_t *)buffer;
+
+        for (int j = 0; j < 128; j++) {
+            if (i == 0 && j < 2) continue;
+            if ((entries[j] & 0x0FFFFFFF) == 0) {
+                free_clusters++;
+            }
+        }
+    }
+
+    uint32_t free_kb = (free_clusters * fs.sectors_per_cluster) / 2;
+
+    char str_buf[16];
+
+    console_print("\nFree Clusters: ");
+    itoa(free_clusters, str_buf);
+    console_print(str_buf);
+
+    console_print("\nFree Space: ");
+    itoa(free_kb, str_buf);
+    console_print(str_buf);
+    console_print(" KB\n");
 }

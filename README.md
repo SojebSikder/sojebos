@@ -5,7 +5,7 @@ SojebOS is a basic operating system
 ![Screenshot](./screenshots/screenshot1.png)
 
 ## Features
-- coreutils: ls, cat, write, rm, clear
+- coreutils: ls, cat, write, rm, df, clear
 - utils: calculator
 - fat32 file system
 - Many more and many more to come...

@@ -8,3 +8,4 @@ void vfs_cat(const char* name);
 //
 void vfs_write(const char* name, uint8_t* data, uint32_t size);
 void vfs_rm(const char* name);
+void vfs_usage();
