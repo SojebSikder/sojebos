@@ -21,4 +21,6 @@ void register_all_apps(){
     register_app("clear", clear_app);
     register_app("ls", ls_app);
     register_app("cat", cat_app);
+    register_app("write", write_app);
+    register_app("rm", rm_app);
 }

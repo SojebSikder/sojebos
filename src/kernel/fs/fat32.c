@@ -1,5 +1,7 @@
 #include "fat32.h"
 #include "../../drivers/console.h"
+#include "../libc/mem.h"
+#include "disk.h"
 #include <stdint.h>
 
 extern void disk_read(uint32_t sector, uint8_t *buffer);
@@ -42,6 +44,10 @@ void fat32_init() {
 
 // directory listing
 static void print_name(char *name) {
+  if ((unsigned char)name[0] == 0xE5) {
+    return;
+  }
+
   char out[13]; // 8 (name) + 1 (.) + 3 (ext) + 1 (null)
   int out_idx = 0;
 
@@ -70,24 +76,29 @@ static void print_name(char *name) {
 
 void fat32_list_root() {
   uint8_t buffer[512];
-
   uint32_t cluster = fs.root_cluster;
 
-  while (cluster < 0x0FFFFFF8) {
-    uint32_t sector = cluster_to_sector(cluster);
+  while (cluster >= 2 && cluster < 0x0FFFFFF8) {
+    uint32_t sector_start = cluster_to_sector(cluster);
 
-    disk_read(sector, buffer);
+    for (uint8_t s = 0; s < fs.sectors_per_cluster; s++) {
+      disk_read(sector_start + s, buffer);
+      fat32_dir_entry *entries = (fat32_dir_entry *)buffer;
 
-    fat32_dir_entry *entry = (fat32_dir_entry *)buffer;
+      for (int i = 0; i < 16; i++) {
+        if (entries[i].name[0] == 0x00) {
+          return; // End of directory
+        }
+        if ((uint8_t)entries[i].name[0] == 0xE5) {
+          continue; // Skip deleted
+        }
+        if (entries[i].attr == 0x0F) {
+          continue; // Skip LFN entries
+        }
 
-    for (int i = 0; i < 16; i++) {
-      if (entry[i].name[0] == 0x00)
-        return;
-
-      if (!(entry[i].attr & 0x0F))
-        print_name(entry[i].name);
+        print_name(entries[i].name);
+      }
     }
-
     cluster = fat32_next_cluster(cluster);
   }
 }
@@ -156,100 +167,277 @@ void format_filename(const char *input, char *output) {
   }
 }
 
-fat32_dir_entry* fat32_find_file(const char* filename) {
-    static fat32_dir_entry found_entry; // Static so it persists after return
-    char search_name[11];
-    format_filename(filename, search_name);
+fat32_dir_entry *fat32_find_file(const char *filename) {
+  static fat32_dir_entry found_entry;
+  char search_name[11];
+  format_filename(filename, search_name);
 
-    uint8_t buffer[512];
-    uint32_t cluster = fs.root_cluster;
+  uint8_t buffer[512];
+  uint32_t cluster = fs.root_cluster;
 
-    while (cluster >= 2 && cluster < 0x0FFFFFF8) {
-        uint32_t sector = cluster_to_sector(cluster);
-        disk_read(sector, buffer);
+  while (cluster >= 2 && cluster < 0x0FFFFFF8) {
+    uint32_t sector_base = cluster_to_sector(cluster);
 
-        fat32_dir_entry *entries = (fat32_dir_entry *)buffer;
+    // ADD THIS: Loop through every sector in the cluster!
+    for (uint8_t s = 0; s < fs.sectors_per_cluster; s++) {
+      disk_read(sector_base + s, buffer);
+      fat32_dir_entry *entries = (fat32_dir_entry *)buffer;
 
-        for (int i = 0; i < 16; i++) {
-            // 0x00 means end of directory
-            if (entries[i].name[0] == 0x00) return 0;
+      for (int i = 0; i < 16; i++) {
+        if (entries[i].name[0] == 0x00)
+          return 0;
+        if ((uint8_t)entries[i].name[0] == 0xE5)
+          continue;
+        if (entries[i].attr == 0x0F)
+          continue;
 
-            // 0xE5 means the file was deleted
-            if (entries[i].name[0] == 0xE5) continue;
-
-            // Check if it's a normal file/dir (ignore Long File Name entries)
-            if (entries[i].attr == 0x0F) continue;
-
-            // Compare 11 bytes of the name
-            int match = 1;
-            for (int j = 0; j < 11; j++) {
-                if (entries[i].name[j] != search_name[j]) {
-                    match = 0;
-                    break;
-                }
-            }
-
-            if (match) {
-                found_entry = entries[i];
-                return &found_entry;
-            }
+        if (memory_compare(entries[i].name, search_name, 11) == 0) {
+          found_entry = entries[i];
+          // Note: To make delete work, you actually need the
+          // sector number and index, not just the entry copy.
+          return &found_entry;
         }
-        cluster = fat32_next_cluster(cluster);
+      }
     }
-    return 0; // Not found
+    cluster = fat32_next_cluster(cluster);
+  }
+  return 0;
 }
 
-void load_and_run_file(const char* name) {
-    fat32_dir_entry* file = fat32_find_file(name);
+void load_and_run_file(const char *name) {
+  fat32_dir_entry *file = fat32_find_file(name);
 
-    if (file) {
-        console_print("File found! Loading...\n");
+  if (file) {
+    console_print("File found! Loading...\n");
 
-        // Allocate or point to a buffer large enough for file->file_size
-        uint8_t* load_address = (uint8_t*)0x100000;
+    // Allocate or point to a buffer large enough for file->file_size
+    uint8_t *load_address = (uint8_t *)0x100000;
 
-        fat32_read_file(file, load_address);
+    fat32_read_file(file, load_address);
 
-        console_print("Read complete.\n");
-    } else {
-        console_print("File not found.\n");
-    }
+    console_print("Read complete.\n");
+  } else {
+    console_print("File not found.\n");
+  }
 }
 
 void fat32_cat(const char *filename) {
-    fat32_dir_entry *entry = fat32_find_file(filename);
-    if (!entry) {
-        console_print("File not found.\n");
-        return;
+  fat32_dir_entry *entry = fat32_find_file(filename);
+  if (!entry) {
+    console_print("File not found.\n");
+    return;
+  }
+
+  uint32_t cluster =
+      ((uint32_t)entry->first_cluster_high << 16) | entry->first_cluster_low;
+  uint32_t bytes_remaining = entry->file_size;
+  uint8_t sector_buffer[513]; // 512 + 1 for null terminator
+
+  while (cluster >= 2 && cluster < 0x0FFFFFF8 && bytes_remaining > 0) {
+    uint32_t sector = cluster_to_sector(cluster);
+
+    // Read each sector in the cluster
+    for (uint8_t i = 0; i < fs.sectors_per_cluster && bytes_remaining > 0;
+         i++) {
+      disk_read(sector + i, sector_buffer);
+
+      // Determine how many bytes to print from this sector
+      uint32_t to_print = (bytes_remaining > 512) ? 512 : bytes_remaining;
+
+      // Null-terminate the buffer safely for console_print
+      // Note: This only works if console_print stops at \0
+      uint8_t temp = sector_buffer[to_print];
+      sector_buffer[to_print] = '\0';
+
+      console_print((char *)sector_buffer);
+
+      // Restore the byte and update counter
+      sector_buffer[to_print] = temp;
+      bytes_remaining -= to_print;
     }
 
-    uint32_t cluster = ((uint32_t)entry->first_cluster_high << 16) | entry->first_cluster_low;
-    uint32_t bytes_remaining = entry->file_size;
-    uint8_t sector_buffer[513]; // 512 + 1 for null terminator
+    cluster = fat32_next_cluster(cluster);
+  }
+  console_print("\n");
+}
 
-    while (cluster >= 2 && cluster < 0x0FFFFFF8 && bytes_remaining > 0) {
-        uint32_t sector = cluster_to_sector(cluster);
+//
+// Write disk
+//
 
-        // Read each sector in the cluster
-        for (uint8_t i = 0; i < fs.sectors_per_cluster && bytes_remaining > 0; i++) {
-            disk_read(sector + i, sector_buffer);
+// find a free cluster in the FAT (entry == 0)
+uint32_t fat32_find_free_cluster() {
+  uint8_t buffer[512];
+  uint32_t fat_sector_start = fs.reserved_sector_count;
 
-            // Determine how many bytes to print from this sector
-            uint32_t to_print = (bytes_remaining > 512) ? 512 : bytes_remaining;
+  for (uint32_t i = 0; i < fs.fat_size; i++) {
 
-            // Null-terminate the buffer safely for console_print
-            // Note: This only works if console_print stops at \0
-            uint8_t temp = sector_buffer[to_print];
-            sector_buffer[to_print] = '\0';
+    disk_read(fat_sector_start + i, buffer);
+    uint32_t *entries = (uint32_t *)buffer;
 
-            console_print((char*)sector_buffer);
+    for (int j = 0; j < 128; j++) {
+      // cluster 0 and 1 are reserved, start looking from cluster 2
+      if (i == 0 && j < 2) {
+        continue;
+      }
 
-            // Restore the byte and update counter
-            sector_buffer[to_print] = temp;
-            bytes_remaining -= to_print;
+      if ((entries[j] & 0x0FFFFFFF) == 0) {
+        return (i * 128) + j;
+      }
+    }
+  }
+  return 0x0FFFFFFF; // No free space/cluster found
+}
+
+// update an entry in the FAT
+void fat32_set_next_cluster(uint32_t cluster, uint32_t next_value) {
+  uint8_t buffer[512];
+  uint32_t fat_offset = cluster * 4;
+  uint32_t fat_sector = fs.reserved_sector_count + (fat_offset / 512);
+  uint32_t entry_offset = fat_offset % 512;
+
+  disk_read(fat_sector, buffer);
+
+  // preserve the high 4 bits as per FAT32 spec
+  uint32_t current = *(uint32_t *)&buffer[entry_offset];
+  next_value = (next_value & 0x0FFFFFFF) | (current & 0xF0000000);
+
+  *(uint32_t *)&buffer[entry_offset] = next_value;
+  disk_write(fat_sector, buffer);
+}
+
+void fat32_write_file(const char *filename, uint8_t *data, uint32_t size) {
+  uint32_t bytes_per_cluster = fs.sectors_per_cluster * 512;
+  uint32_t clusters_needed = (size + bytes_per_cluster - 1) / bytes_per_cluster;
+
+  uint32_t prev_cluster = 0;
+  uint32_t first_cluster = 0;
+
+  // Allocate and link clusters in the FAT
+  for (uint32_t i = 0; i < clusters_needed; i++) {
+    uint32_t current_cluster = fat32_find_free_cluster();
+    if (current_cluster == 0x0FFFFFFF)
+      return;
+
+    if (i == 0) {
+      first_cluster = current_cluster;
+    } else {
+      fat32_set_next_cluster(prev_cluster, current_cluster);
+    }
+
+    fat32_set_next_cluster(current_cluster, 0x0FFFFFFF); // Mark EOF
+
+    // Write data to sectors
+    uint32_t start_sector = cluster_to_sector(current_cluster);
+    for (uint8_t s = 0; s < fs.sectors_per_cluster; s++) {
+      uint32_t data_offset = (i * bytes_per_cluster) + (s * 512);
+      if (data_offset < size) {
+        uint32_t chunk_size = size - data_offset;
+        if (chunk_size >= 512) {
+          disk_write(start_sector + s, data + data_offset);
+        } else {
+          uint8_t padding[512] = {0};
+          for (uint32_t j = 0; j < chunk_size; j++)
+            padding[j] = data[data_offset + j];
+          disk_write(start_sector + s, padding);
+        }
+      }
+    }
+    prev_cluster = current_cluster;
+  }
+
+  // Find a slot in the Root Directory (Iterating clusters and sectors)
+  uint32_t dir_cluster = fs.root_cluster;
+  uint8_t dir_buffer[512];
+
+  while (dir_cluster >= 2 && dir_cluster < 0x0FFFFFF8) {
+    uint32_t sector_start = cluster_to_sector(dir_cluster);
+
+    for (uint8_t s = 0; s < fs.sectors_per_cluster; s++) {
+      disk_read(sector_start + s, dir_buffer);
+      fat32_dir_entry *entries = (fat32_dir_entry *)dir_buffer;
+
+      for (int i = 0; i < 16; i++) {
+        // If the entry is empty (0x00) or deleted (0xE5), we take it
+        if (entries[i].name[0] == 0x00 || (uint8_t)entries[i].name[0] == 0xE5) {
+          format_filename(filename, entries[i].name);
+          entries[i].attr = 0x20; // Archive attribute
+          entries[i].first_cluster_low = first_cluster & 0xFFFF;
+          entries[i].first_cluster_high = (first_cluster >> 16) & 0xFFFF;
+          entries[i].file_size = size;
+
+          disk_write(sector_start + s, dir_buffer);
+          return; // Success
+        }
+      }
+    }
+    dir_cluster = fat32_next_cluster(dir_cluster);
+    // Note: If dir_cluster becomes EOF here, you'd technically need to
+    // allocate a NEW cluster for the directory, but for a basic OS,
+    // 1 cluster (usually 4KB) is usually enough for 128 files.
+  }
+}
+
+void fat32_delete_file(const char *filename) {
+  char search_name[11];
+  format_filename(filename, search_name);
+
+  uint8_t dir_buffer[512];
+  uint32_t cluster = fs.root_cluster;
+
+  // Search for the file in the root directory
+  while (cluster >= 2 && cluster < 0x0FFFFFF8) {
+    uint32_t sector_start = cluster_to_sector(cluster);
+
+    // Loop through every sector in the cluster
+    for (uint8_t s = 0; s < fs.sectors_per_cluster; s++) {
+      uint32_t current_sector = sector_start + s;
+      disk_read(current_sector, dir_buffer);
+      fat32_dir_entry *entries = (fat32_dir_entry *)dir_buffer;
+
+      for (int i = 0; i < 16; i++) {
+        // End of directory - if we hit this, the file definitely doesn't exist
+        if (entries[i].name[0] == 0x00)
+          return;
+
+        // Skip already deleted entries
+        if ((uint8_t)entries[i].name[0] == 0xE5)
+          continue;
+
+        // Compare names (11 bytes: 8 name + 3 extension)
+        int match = 1;
+        for (int j = 0; j < 11; j++) {
+          if (entries[i].name[j] != search_name[j]) {
+            match = 0;
+            break;
+          }
         }
 
-        cluster = fat32_next_cluster(cluster);
+        // Match found! (And not a Long File Name entry)
+        if (match && entries[i].attr != 0x0F) {
+          uint32_t cluster_to_free =
+              ((uint32_t)entries[i].first_cluster_high << 16) |
+              entries[i].first_cluster_low;
+
+          // Clear the FAT chain (mark clusters as 0x00000000)
+          while (cluster_to_free >= 2 && cluster_to_free < 0x0FFFFFF8) {
+            uint32_t next = fat32_next_cluster(cluster_to_free);
+            fat32_set_next_cluster(cluster_to_free, 0x00000000);
+            cluster_to_free = next;
+          }
+
+          // Mark directory entry as deleted
+          entries[i].name[0] = 0xE5;
+
+          // Write ONLY this specific sector back to disk
+          disk_write(current_sector, dir_buffer);
+
+          // console_print("File deleted successfully.\n");
+          return; // success
+        }
+      }
     }
-    console_print("\n");
+    // Move to the next cluster in the directory chain if needed
+    cluster = fat32_next_cluster(cluster);
+  }
 }

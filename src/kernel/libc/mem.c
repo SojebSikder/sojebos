@@ -15,3 +15,15 @@ void memory_set(void *dest, int c, int n) {
         *d++ = c;
     }
 }
+
+// memcmp
+int memory_compare(const void *s1, const void *s2, int n) {
+    const char *a = s1;
+    const char *b = s2;
+    while (n--) {
+        if (*a != *b) return *a - *b;
+        a++;
+        b++;
+    }
+    return 0;
+}
