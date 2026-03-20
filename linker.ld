@@ -15,4 +15,7 @@ SECTIONS
     .rodata : { *(.rodata) }
     .data   : { *(.data) }
     .bss    : { *(.bss)  }
+
+    /* Define a symbol for the end of the kernel */
+    _kernel_end = .;
 }
