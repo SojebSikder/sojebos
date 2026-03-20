@@ -2,8 +2,22 @@
 #include "../drivers/console.h"
 #include "./fs/vfs.h"
 #include "./libc/string.h"
+#include "./shell/shell.h"
+#include "memory/memory.h"
+#include <stddef.h>
+#include <stdint.h>
+
+// external symbol from linker script
+extern uint8_t _kernel_end[];
 
 void __attribute__((section(".text.kernel_main"))) kernel_main() {
+  // Initialize Memory allocator first
+  // Let's give the heap 4MB of space starting after kernel
+  void *heap_start = (void *)_kernel_end;
+  size_t heap_size = 4 * 1024 * 1024; // 4MB
+
+  kheap_init(heap_start, heap_size);
+
   // init file system
   vfs_init();
   // print welcome message
@@ -21,59 +35,6 @@ void __attribute__((section(".text.kernel_main"))) kernel_main() {
   // Register apps
   register_all_apps();
 
-  char input[64];
-  char *argv[10]; // support up to 10 arguments
-
-  while (1) {
-    console_print("> ");
-    console_read_line(input, 64);
-
-    // tokenize the input
-    int argc = 0;
-    char *ptr = input;
-
-    while (*ptr != '\0' && argc < 10) {
-      // Skip leading spaces
-      while (*ptr == ' ') {
-        ptr++;
-      }
-      if (*ptr == '\0') {
-        break;
-      }
-
-      argv[argc++] = ptr;
-
-      // Find end of token
-      while (*ptr != ' ' && *ptr != '\0') {
-        ptr++;
-      }
-      if (*ptr != '\0') {
-        *ptr = '\0'; // Null terminate the argument
-        ptr++;
-      }
-    }
-
-    if (argc == 0) {
-      continue;
-    }
-
-    if (strcmp(argv[0], "exit") == 0) {
-      console_print("Exiting SojebOS shell...\n");
-      break;
-    }
-
-    // Search for app by name
-    int found = 0;
-    for (int i = 0; i < app_count; i++) {
-      if (strcmp(argv[0], apps[i].name) == 0) {
-        apps[i].func(argc, argv);
-        found = 1;
-        break;
-      }
-    }
-
-    if (!found) {
-      console_print("Command not found!\n");
-    }
-  }
+  // run shell
+  shell_run();
 }
