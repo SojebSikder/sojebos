@@ -6,6 +6,7 @@
 void __attribute__((section(".text.kernel_main"))) kernel_main() {
   // init file system
   vfs_init();
+  // print welcome message
   console_clear();
   console_print("\n");
   console_print("   _____   ____       _  ______ ____   ____   _____ \n");

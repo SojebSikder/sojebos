@@ -1,6 +1,9 @@
 #include "console.h"
 #include "../kernel/io.h"
 
+#define KEYBOARD_STATUS_PORT 0x64
+#define KEYBOARD_DATA_PORT 0x60
+
 // Video Memory
 volatile uint16_t *video = (uint16_t *)VIDEO_MEMORY;
 Console console = {0, 0};
@@ -20,9 +23,9 @@ static char scancode_map_shift[] = {
     'B', 'N', 'M',  '<',  '>',  '?', 0,   '*', 0,   ' '};
 
 unsigned char get_scancode() {
-  while (!(inb(0x64) & 1))
+  while (!(inb(KEYBOARD_STATUS_PORT) & 1))
     ;
-  return inb(0x60);
+  return inb(KEYBOARD_DATA_PORT);
 }
 
 // Scroll the screen up by one line
