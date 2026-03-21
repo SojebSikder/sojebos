@@ -3,6 +3,8 @@
 #include "./fs/vfs.h"
 #include "./libc/string.h"
 #include "./shell/shell.h"
+#include "gdt/gdt.h"
+#include "gdt/tss.h"
 #include "memory/memory.h"
 #include <stddef.h>
 #include <stdint.h>
@@ -17,6 +19,14 @@ void __attribute__((section(".text.kernel_main"))) kernel_main() {
   size_t heap_size = 4 * 1024 * 1024; // 4MB
 
   kheap_init(heap_start, heap_size);
+
+  // Initialize GDT
+  gdt_init();
+
+  // Initialize TSS
+  uint32_t kernel_stack_top;
+  asm volatile("mov %%esp, %0" : "=r"(kernel_stack_top));
+  tss_init(5, 0x10, kernel_stack_top);
 
   // init file system
   vfs_init();
