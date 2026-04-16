@@ -15,7 +15,7 @@ static void ata_wait() {
     ;
 }
 
-void ata_read_sector(uint32_t lba, uint8_t *buffer) // Changed to pointer
+void ata_read_sector(uint32_t lba, uint8_t *buffer)
 {
   ata_wait();
   outb(ATA_DRIVE, 0xE0 | ((lba >> 24) & 0x0F));
@@ -51,7 +51,7 @@ void ata_write_sector(uint32_t lba, uint8_t *buffer) {
     outw(ATA_DATA, ptr[i]); // outw for 16-bit data transfer
   }
 
-  // Optional: Flush the cache to ensure the physical disk updates
+  // Flush the cache to ensure the physical disk updates
   outb(ATA_CMD, 0xE7); // CACHE FLUSH
   ata_wait();
 }

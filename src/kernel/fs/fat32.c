@@ -179,7 +179,7 @@ fat32_dir_entry *fat32_find_file(const char *filename) {
   while (cluster >= 2 && cluster < 0x0FFFFFF8) {
     uint32_t sector_base = cluster_to_sector(cluster);
 
-    // ADD THIS: Loop through every sector in the cluster!
+    // Loop through every sector in the cluster!
     for (uint8_t s = 0; s < fs.sectors_per_cluster; s++) {
       disk_read(sector_base + s, buffer);
       fat32_dir_entry *entries = (fat32_dir_entry *)buffer;
@@ -194,7 +194,7 @@ fat32_dir_entry *fat32_find_file(const char *filename) {
 
         if (memory_compare(entries[i].name, search_name, 11) == 0) {
           found_entry = entries[i];
-          // Note: To make delete work, you actually need the
+          // To make delete work, we actually need the
           // sector number and index, not just the entry copy.
           return &found_entry;
         }
@@ -246,7 +246,7 @@ void fat32_cat(const char *filename) {
       uint32_t to_print = (bytes_remaining > 512) ? 512 : bytes_remaining;
 
       // Null-terminate the buffer safely for console_print
-      // Note: This only works if console_print stops at \0
+      // This only works if console_print stops at \0
       uint8_t temp = sector_buffer[to_print];
       sector_buffer[to_print] = '\0';
 
@@ -373,7 +373,7 @@ void fat32_write_file(const char *filename, uint8_t *data, uint32_t size) {
       }
     }
     dir_cluster = fat32_next_cluster(dir_cluster);
-    // Note: If dir_cluster becomes EOF here, you'd technically need to
+    // If dir_cluster becomes EOF here, we technically need to
     // allocate a NEW cluster for the directory, but for a basic OS,
     // 1 cluster (usually 4KB) is usually enough for 128 files.
   }
