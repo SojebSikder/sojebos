@@ -1,5 +1,5 @@
 #include "../apps/apps.h"
-#include "../drivers/console.h"
+#include "./drivers/console.h"
 #include "./fs/vfs.h"
 #include "./libc/string.h"
 #include "./shell/shell.h"

@@ -1,5 +1,5 @@
 #include "fat32.h"
-#include "../../drivers/console.h"
+#include "../drivers/console.h"
 #include "../libc/mem.h"
 #include "disk.h"
 #include <stdint.h>
