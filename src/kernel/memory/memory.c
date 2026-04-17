@@ -1,3 +1,7 @@
+//
+// Memory Allocator implemented using a First-Fit Linked List Allocator
+//
+
 #include "memory.h"
 #include <stdint.h>
 

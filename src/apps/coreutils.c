@@ -1,4 +1,4 @@
-#include "../drivers/console.h"
+#include "../kernel/drivers/console.h"
 #include "../kernel/fs/vfs.h"
 #include "../kernel/libc/string.h"
 #include <stdint.h>

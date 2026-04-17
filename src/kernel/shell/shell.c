@@ -5,14 +5,18 @@
  */
 
 #include "../../apps/apps.h"
-#include "../../drivers/console.h"
+#include "../drivers/console.h"
 #include "../libc/string.h"
+#include "../drivers/network/rtl8139.h"
+
 
 void shell_run() {
   char input[64];
   char *argv[10]; // support up to 10 arguments
 
   while (1) {
+    rtl8139_poll();
+
     console_print("> ");
     console_read_line(input, 64);
 

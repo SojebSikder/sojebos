@@ -81,8 +81,8 @@ cleandisk:
 
 # Run in QEMU
 run: $(ISO_IMG)
-	# qemu-system-i386 -cdrom $(ISO_IMG) -m 512M
-	qemu-system-i386 -boot d -cdrom $(ISO_IMG) -drive format=raw,file=$(DISK_IMG) -m 512M
+	# qemu-system-i386 -boot d -cdrom $(ISO_IMG) -drive format=raw,file=$(DISK_IMG) -m 512M
+	qemu-system-i386 -boot d -cdrom $(ISO_IMG) -drive format=raw,file=$(DISK_IMG) -m 512M -netdev user,id=u1 -device rtl8139,netdev=u1
 
 # Clean build artifacts
 clean:

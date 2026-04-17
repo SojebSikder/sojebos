@@ -3,6 +3,8 @@
 #include "./fs/vfs.h"
 #include "./libc/string.h"
 #include "./shell/shell.h"
+#include "drivers/network/rtl8139.h"
+#include "drivers/pci.h"
 #include "gdt/gdt.h"
 #include "gdt/tss.h"
 #include "memory/memory.h"
@@ -44,6 +46,15 @@ void __attribute__((section(".text.kernel_main"))) kernel_main() {
 
   // Register apps
   register_all_apps();
+
+  // Find and Init the Network Card
+  uint32_t rtl_io = pci_find_rtl8139();
+  if (rtl_io > 0) {
+    console_print("Network: RTL8139 found and initialized.\n");
+    rtl8139_init(rtl_io);
+  } else {
+    console_print("Network: No RTL8139 card found.\n");
+  }
 
   // run shell
   shell_run();

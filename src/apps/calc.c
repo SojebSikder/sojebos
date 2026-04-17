@@ -1,4 +1,4 @@
-#include "../drivers/console.h"
+#include "../kernel/drivers/console.h"
 #include "../kernel/libc/string.h"
 
 // Calculator App
