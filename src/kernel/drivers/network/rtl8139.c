@@ -14,37 +14,37 @@ uint8_t mac_address[6];
 void rtl8139_init(uint32_t pci_io_base) {
     io_base = pci_io_base;
 
-    // 1. Allocate the Receive Buffer (8K + 16 bytes + 1.5K for safety)
+    // Allocate the Receive Buffer (8K + 16 bytes + 1.5K for safety)
     // The RTL8139 uses a wrap-around ring buffer.
     rx_buffer = (uint8_t *)kmalloc(8192 + 16 + 1500);
 
-    // 2. Power ON the device (Config 1 register)
+    // Power ON the device (Config 1 register)
     outb(io_base + RTL8139_REG_CONFIG1, 0x00);
 
-    // 3. Software Reset
+    // Software Reset
     outb(io_base + RTL8139_REG_COMMAND, 0x10);
     while ((inb(io_base + RTL8139_REG_COMMAND) & 0x10) != 0) {
         // Wait for reset to complete
     }
 
-    // 4. Set the Receive Buffer address (RBSTART)
+    // Set the Receive Buffer address (RBSTART)
     // Note: If you implement paging later, this MUST be the physical address.
     outl(io_base + RTL8139_REG_RBSTART, (uint32_t)rx_buffer);
 
-    // 5. Initialize Interrupts (IMR)
-    // Even without an IDT, we set these bits so the card updates its status regs.
+    // Initialize Interrupts (IMR)
+    // we set these bits so the card updates its status regs.
     // 0x0005 = Sets ROK (Receive OK) and TOK (Transmit OK)
     outw(io_base + RTL8139_REG_IMR, 0x0005);
 
-    // 6. Configure Receive Mode (RCR)
+    // Configure Receive Mode (RCR)
     // 0x0F = Accept Broadcast, Multicast, My MAC, and Promiscuous
     // (1 << 7) = Wrap bit (allows the card to write past the end of buffer temporarily)
     outl(io_base + 0x44, 0xf | (1 << 7));
 
-    // 7. Enable Transmitter and Receiver
+    // Enable Transmitter and Receiver
     outb(io_base + RTL8139_REG_COMMAND, 0x0C);
 
-    // 8. Read MAC Address
+    // Read MAC Address
     for (int i = 0; i < 6; i++) {
         mac_address[i] = inb(io_base + RTL8139_REG_MAC + i);
     }
