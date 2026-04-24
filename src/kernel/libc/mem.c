@@ -1,7 +1,7 @@
 #include "mem.h"
 
 
-void memory_copy(void *dest, const void *src, int n) {
+void memcpy(void *dest, const void *src, int n) {
     char *d = dest;
     const char *s = src;
     while (n--) {
@@ -9,7 +9,7 @@ void memory_copy(void *dest, const void *src, int n) {
     }
 }
 
-void memory_set(void *dest, int c, int n) {
+void memset(void *dest, int c, int n) {
     char *d = dest;
     while (n--) {
         *d++ = c;
@@ -17,7 +17,7 @@ void memory_set(void *dest, int c, int n) {
 }
 
 // memcmp
-int memory_compare(const void *s1, const void *s2, int n) {
+int memcmp(const void *s1, const void *s2, int n) {
     const char *a = s1;
     const char *b = s2;
     while (n--) {

@@ -10,7 +10,7 @@ extern void gdt_set_gate(uint32_t num, uint32_t base, uint32_t limit,
 
 void tss_init(uint32_t idx, uint32_t kss, uint32_t kesp) {
   // 1. Clear the TSS memory
-  memory_set(&tss_entry, 0, sizeof(tss_entry_t));
+  memset(&tss_entry, 0, sizeof(tss_entry_t));
 
   // 2. Set the kernel stack segments
   tss_entry.ss0 = kss;   // Usually 0x10 (Kernel Data Segment)

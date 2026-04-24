@@ -192,7 +192,7 @@ fat32_dir_entry *fat32_find_file(const char *filename) {
         if (entries[i].attr == 0x0F)
           continue;
 
-        if (memory_compare(entries[i].name, search_name, 11) == 0) {
+        if (memcmp(entries[i].name, search_name, 11) == 0) {
           found_entry = entries[i];
           // To make delete work, we actually need the
           // sector number and index, not just the entry copy.

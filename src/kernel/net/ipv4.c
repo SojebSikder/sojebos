@@ -87,7 +87,7 @@ void ipv4_send(uint32_t dest_ip, uint8_t protocol, void *data, uint32_t len) {
     ip->checksum = net_checksum(ip, sizeof(struct ipv4_header));
 
     // Copy the payload (data) into the buffer after the header
-    memory_copy(combined_packet + sizeof(struct ipv4_header), data, len);
+    memcpy(combined_packet + sizeof(struct ipv4_header), data, len);
 
     //  Send to Ethernet layer
     // NOTE: Without ARP, we broadcast the MAC.
