@@ -3,7 +3,7 @@
 #include "./fs/vfs.h"
 #include "./libc/string.h"
 #include "./shell/shell.h"
-#include "drivers/network/rtl8139.h"
+#include "drivers/net/rtl8139.h"
 #include "drivers/pci.h"
 #include "gdt/gdt.h"
 #include "gdt/tss.h"

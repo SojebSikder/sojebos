@@ -1,18 +1,17 @@
 #include "ipv4.h"
 #include "ethernet.h"
+#include "arp.h"
 #include "icmp.h"
 #include "../memory/memory.h"
 #include "../libc/string.h"
-#include <stdint.h>
 
 #define MAKE_IP(a,b,c,d) ((uint32_t)((a) | (b) << 8 | (c) << 16 | (d) << 24))
 
-// Static IP for SojebOS.
-// Change this to match your virtual network (e.g., 10.0.2.15 for QEMU user net)
+// Global IP for the OS (referenced by arp.c)
 uint32_t sojeb_os_ip = MAKE_IP(192, 168, 10, 11);
 
 /**
- * Standard IPv4 Checksum (1's complement)
+ * Standard Internet Checksum (RFC 1071)
  */
 uint16_t net_checksum(void *vdata, uint32_t length) {
     uint32_t sum = 0;
@@ -35,66 +34,90 @@ uint16_t net_checksum(void *vdata, uint32_t length) {
 }
 
 /**
- * Incoming IP packet handler
+ * Handle incoming IPv4 packets
  */
 void ipv4_handle_packet(void *data, uint32_t len) {
-    struct ipv4_header *ip = (struct ipv4_header *)data;
-
-    // Minimum sanity check
     if (len < sizeof(struct ipv4_header)) return;
 
-    // Filter: Only process packets meant for SojebOS IP or Broadcast
+    struct ipv4_header *ip = (struct ipv4_header *)data;
+
+    // Filter: Check if the destination is our IP or global broadcast
     if (ip->dest_ip != sojeb_os_ip && ip->dest_ip != 0xFFFFFFFF) {
         return;
     }
 
+    // Verify Checksum (Should result in 0 if correct)
+    // Note: Some drivers/emulators offload this, but we check in software for safety.
+
     uint32_t header_len = ip->ihl * 4;
     void *payload = (uint8_t *)data + header_len;
-    uint32_t payload_len = __builtin_bswap16(ip->total_length) - header_len;
 
-    if (ip->protocol == 1) { // ICMP Protocol
-        icmp_handle(ip, payload, payload_len);
+    // total_length is big-endian
+    uint16_t total_len_host = __builtin_bswap16(ip->total_length);
+    if (total_len_host < header_len) return;
+
+    uint32_t payload_len = total_len_host - header_len;
+
+    // Route based on protocol
+    switch (ip->protocol) {
+        case IPV4_PROTO_ICMP:
+            icmp_handle(ip, payload, payload_len);
+            break;
+
+        // case IPV4_PROTO_UDP:
+        //     udp_handle(ip, payload, payload_len);
+        //     break;
+
+        default:
+            // Protocol not supported
+            break;
     }
 }
 
 /**
- * Outgoing IP packet constructor
+ * Send an IPv4 packet
  */
 void ipv4_send(uint32_t dest_ip, uint8_t protocol, void *data, uint32_t len) {
-    uint32_t total_len = sizeof(struct ipv4_header) + len;
+    uint32_t header_len = sizeof(struct ipv4_header);
+    uint32_t total_len = header_len + len;
 
-    // Allocate a temporary buffer for the combined packet
-    uint8_t *combined_packet = (uint8_t *)kmalloc(total_len);
-    if (!combined_packet) return;
+    // Allocate buffer for the whole IP packet
+    uint8_t *packet = (uint8_t *)kmalloc(total_len);
+    if (!packet) return;
 
-    struct ipv4_header *ip = (struct ipv4_header *)combined_packet;
+    struct ipv4_header *ip = (struct ipv4_header *)packet;
 
-    // Fill the IP Header
+    // Build the Header
     ip->version = 4;
-    ip->ihl = 5; // 5 * 4 = 20 bytes
+    ip->ihl = 5;
     ip->tos = 0;
     ip->total_length = __builtin_bswap16(total_len);
-    ip->id = __builtin_bswap16(1);
+    ip->id = __builtin_bswap16(0); // Fragmentation not implemented
     ip->fragment_offset = 0;
     ip->ttl = 64;
     ip->protocol = protocol;
     ip->src_ip = sojeb_os_ip;
     ip->dest_ip = dest_ip;
 
-    // Calculate Checksum (Must be 0 before calculation)
+    // Calculate Checksum
     ip->checksum = 0;
-    ip->checksum = net_checksum(ip, sizeof(struct ipv4_header));
+    ip->checksum = net_checksum(ip, header_len);
 
-    // Copy the payload (data) into the buffer after the header
-    memcpy(combined_packet + sizeof(struct ipv4_header), data, len);
+    // Attach Payload
+    memcpy(packet + header_len, data, len);
 
-    //  Send to Ethernet layer
-    // NOTE: Without ARP, we broadcast the MAC.
-    // The recipient will see the IP matches and process it.
-    uint8_t broadcast_mac[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
-    // TODO: implement this
-    // ethernet_send_packet(broadcast_mac, ETHERTYPE_IPV4, combined_packet, total_len);
+    // Resolve Destination MAC via ARP
+    uint8_t *dest_mac = arp_lookup(dest_ip);
 
-    // 6. Free the temporary buffer
-    kfree(combined_packet);
+    if (dest_mac) {
+        ethernet_send_packet(dest_mac, ETHERTYPE_IPV4, packet, total_len);
+    } else {
+        // We don't have the MAC. Trigger ARP request.
+        // The current packet is dropped (standard behavior for simple stacks).
+        // The upper layer/user will likely retry.
+        arp_send_request(dest_ip);
+    }
+
+    // Cleanup
+    kfree(packet);
 }

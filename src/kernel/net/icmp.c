@@ -1,46 +1,30 @@
 #include "icmp.h"
 #include "ipv4.h"
-
-void icmp_header(struct ipv4_header *ip_pkt, void *data, uint32_t len) {
-  struct icmp_header *icmp = (struct icmp_header *)data;
-
-  if (icmp->type == ICMP_TYPE_ECHO_REQUEST) {
-    // prepare reply
-    icmp->type = ICMP_TYPE_ECHO_REPLY;
-    icmp->checksum = 0;
-    icmp->checksum = net_checksum(icmp, len);
-
-    // send back to sender
-    ipv4_send(ip_pkt->src_ip, 1, data, len);
-  }
-}
+#include "../libc/string.h"
 
 /**
- * Handles incoming ICMP packets.
- * @param ip_pkt: Pointer to the encapsulating IPv4 header
- * @param data:   Pointer to the start of the ICMP payload
- * @param len:    Length of the ICMP payload
+ * Processes incoming ICMP packets and responds to Echo Requests (Pings)
  */
-void icmp_handle(struct ipv4_header *ip_pkt, void *data, uint32_t len) {
-    // Ensure the packet is at least large enough for an ICMP header
-    if (len < sizeof(struct icmp_header)) {
-        return;
+void icmp_handle(struct ipv4_header* ip_hdr, void* data, uint32_t len) {
+    if (len < sizeof(struct icmp_header)) return;
+
+    struct icmp_header* icmp = (struct icmp_header*)data;
+
+    // We only care about Echo Requests (Type 8)
+    if (icmp->type == ICMP_TYPE_ECHO_REQUEST) {
+
+        // Prepare the reply header
+        // We can modify the incoming header in place for the reply to save memory
+        icmp->type = ICMP_TYPE_ECHO_REPLY;
+        icmp->code = 0;
+        icmp->checksum = 0; // Reset for calculation
+
+        // Recalculate ICMP Checksum
+        // The ICMP checksum covers the header AND the payload (the whole 'len')
+        icmp->checksum = net_checksum(icmp, len);
+
+        // Send the response back using the IPv4 layer
+        // We swap the destination: the original sender becomes our target
+        ipv4_send(ip_hdr->src_ip, IPV4_PROTO_ICMP, data, len);
     }
-
-    struct icmp_header *icmp = (struct icmp_header *)data;
-
-    // Verify Checksum: ICMP checksum covers the entire ICMP message
-    uint16_t received_checksum = icmp->checksum;
-    icmp->checksum = 0;
-
-    if (received_checksum != net_checksum(data, len)) {
-        // Drop packet if checksum is invalid
-        return;
-    }
-
-    // Restore checksum for the handler logic
-    icmp->checksum = received_checksum;
-
-    // Dispatch to the specific ICMP type handler
-    icmp_header(ip_pkt, data, len);
 }

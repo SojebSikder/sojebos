@@ -7,7 +7,7 @@
 #include "../../apps/apps.h"
 #include "../drivers/console.h"
 #include "../libc/string.h"
-#include "../drivers/network/rtl8139.h"
+#include "../drivers/net/rtl8139.h"
 
 
 void shell_run() {
