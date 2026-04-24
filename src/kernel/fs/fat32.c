@@ -1,6 +1,6 @@
 #include "fat32.h"
 #include "../drivers/console.h"
-#include "../libc/mem.h"
+#include "../libc/string.h"
 #include "disk.h"
 #include <stdint.h>
 #include "../libc/string.h"

@@ -3,7 +3,6 @@
 #include "icmp.h"
 #include "../memory/memory.h"
 #include "../libc/string.h"
-#include "../libc/mem.h"
 #include <stdint.h>
 
 #define MAKE_IP(a,b,c,d) ((uint32_t)((a) | (b) << 8 | (c) << 16 | (d) << 24))

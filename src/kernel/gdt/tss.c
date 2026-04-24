@@ -1,5 +1,5 @@
 #include "tss.h"
-#include "../libc/mem.h"
+#include "../libc/string.h"
 
 // We only need one TSS for the whole system in a basic kernel
 static tss_entry_t tss_entry;
