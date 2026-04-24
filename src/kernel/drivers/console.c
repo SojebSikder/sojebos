@@ -68,6 +68,55 @@ void console_print(const char *str) {
   }
 }
 
+void console_printf(const char *fmt, ...) {
+    va_list args;
+    va_start(args, fmt);
+
+    for (int i = 0; fmt[i] != '\0'; i++) {
+        if (fmt[i] == '%') {
+            i++;
+            if (fmt[i] == 's') {
+                char *str = va_arg(args, char *);
+                console_print(str);
+            } else if (fmt[i] == 'c') {
+                char c = (char)va_arg(args, int);
+                console_putchar(c);
+            } else if (fmt[i] == 'd') {
+                int num = va_arg(args, int);
+
+                char buf[16];
+                int j = 0;
+
+                if (num == 0) {
+                    console_putchar('0');
+                    continue;
+                }
+
+                if (num < 0) {
+                    console_putchar('-');
+                    num = -num;
+                }
+
+                while (num > 0) {
+                    buf[j++] = '0' + (num % 10);
+                    num /= 10;
+                }
+
+                while (j--) {
+                    console_putchar(buf[j]);
+                }
+            } else {
+                console_putchar('%');
+                console_putchar(fmt[i]);
+            }
+        } else {
+            console_putchar(fmt[i]);
+        }
+    }
+
+    va_end(args);
+}
+
 void console_clear() {
   for (int i = 0; i < CONSOLE_WIDTH * CONSOLE_HEIGHT; i++) {
     video[i] = (WHITE_ON_BLACK << 8) | ' ';

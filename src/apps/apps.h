@@ -8,7 +8,7 @@ typedef struct {
   AppFunc func;
 } ConsoleApp;
 
-#define MAX_APPS 8
+#define MAX_APPS 9
 extern ConsoleApp apps[MAX_APPS];
 extern int app_count;
 

@@ -1,4 +1,5 @@
 #include <stddef.h>
+#include <stdint.h>
 
 int strcmp(const char *s1, const char *s2) {
   int i = 0;
@@ -94,6 +95,16 @@ size_t strlen(const char *str) {
   return i;
 }
 
+// returns a pointer to the first occurrence of c in str, or NULL if not found
+char *strchr(const char *str, int c) {
+  while (*str != '\0') {
+    if (*str == c) return (char *)str;
+    str++;
+  }
+  return NULL;
+}
+
+
 
 //
 // memory manipulation
@@ -124,4 +135,20 @@ int memcmp(const void *s1, const void *s2, int n) {
         b++;
     }
     return 0;
+}
+
+//
+// net
+//
+
+uint32_t parse_ip(char* ip) {
+    uint32_t res = 0;
+    for (int i = 0; i < 4; i++) {
+        char* dot = strchr(ip, '.');
+        if (dot) *dot = 0;
+        int val = atoi(ip);
+        res |= (val << (i * 8));
+        if (dot) ip = dot + 1;
+    }
+    return res;
 }

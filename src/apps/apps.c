@@ -1,8 +1,9 @@
 #include "apps.h"
 #include "../apps/calc.h"
-#include "../apps/hello.h"
 #include "../apps/clear.h"
 #include "../apps/coreutils.h"
+#include "../apps/hello.h"
+#include "../apps/ping.h"
 
 ConsoleApp apps[MAX_APPS];
 int app_count = 0;
@@ -15,13 +16,14 @@ void register_app(const char *name, AppFunc func) {
   }
 }
 
-void register_all_apps(){
-    register_app("hello", hello_app);
-    register_app("calc", calculator_app);
-    register_app("clear", clear_app);
-    register_app("ls", ls_app);
-    register_app("cat", cat_app);
-    register_app("write", write_app);
-    register_app("rm", rm_app);
-    register_app("df", disk_usage_app);
+void register_all_apps() {
+  register_app("hello", hello_app);
+  register_app("calc", calculator_app);
+  register_app("clear", clear_app);
+  register_app("ls", ls_app);
+  register_app("cat", cat_app);
+  register_app("write", write_app);
+  register_app("rm", rm_app);
+  register_app("df", disk_usage_app);
+  register_app("ping", command_ping);
 }
