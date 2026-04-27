@@ -61,8 +61,6 @@ void ethernet_send_packet(uint8_t* dest_mac, uint16_t type, void* data, uint32_t
     memcpy(header.src_mac, mac_address, 6);
     header.type = __builtin_bswap16(type);
 
-    // Create a temporary buffer for the whole frame
-    // In a real OS, you'd use a specialized "packet buffer" (sk_buff / mbuf)
     uint8_t frame[1514];
     memcpy(frame, &header, sizeof(struct eth_header));
     memcpy(frame + sizeof(struct eth_header), data, len);
