@@ -1,3 +1,4 @@
+#include "../memory/memory.h"
 #include <stddef.h>
 #include <stdint.h>
 
@@ -98,57 +99,73 @@ size_t strlen(const char *str) {
 // returns a pointer to the first occurrence of c in str, or NULL if not found
 char *strchr(const char *str, int c) {
   while (*str != '\0') {
-    if (*str == c) return (char *)str;
+    if (*str == c)
+      return (char *)str;
     str++;
   }
   return NULL;
 }
 
-
+// strdup: returns a pointer to a newly allocated string that is a duplicate of
+// the input string
+char *strdup(const char *s) {
+  size_t len = strlen(s) + 1;
+  char *new = kmalloc(len);
+  if (!new) {
+    return NULL;
+  }
+  for (size_t i = 0; i < len; i++) {
+    new[i] = s[i];
+  }
+  return new;
+}
 
 //
 // memory manipulation
 //
 
 void memcpy(void *dest, const void *src, int n) {
-    char *d = dest;
-    const char *s = src;
-    while (n--) {
-        *d++ = *s++;
-    }
+  char *d = dest;
+  const char *s = src;
+  while (n--) {
+    *d++ = *s++;
+  }
 }
 
 void memset(void *dest, int c, int n) {
-    char *d = dest;
-    while (n--) {
-        *d++ = c;
-    }
+  char *d = dest;
+  while (n--) {
+    *d++ = c;
+  }
 }
 
 // memcmp
 int memcmp(const void *s1, const void *s2, int n) {
-    const char *a = s1;
-    const char *b = s2;
-    while (n--) {
-        if (*a != *b) return *a - *b;
-        a++;
-        b++;
-    }
-    return 0;
+  const char *a = s1;
+  const char *b = s2;
+  while (n--) {
+    if (*a != *b)
+      return *a - *b;
+    a++;
+    b++;
+  }
+  return 0;
 }
 
 //
 // net
 //
 
-uint32_t parse_ip(char* ip) {
-    uint32_t res = 0;
-    for (int i = 0; i < 4; i++) {
-        char* dot = strchr(ip, '.');
-        if (dot) *dot = 0;
-        int val = atoi(ip);
-        res |= (val << (i * 8));
-        if (dot) ip = dot + 1;
-    }
-    return res;
+uint32_t parse_ip(char *ip) {
+  uint32_t res = 0;
+  for (int i = 0; i < 4; i++) {
+    char *dot = strchr(ip, '.');
+    if (dot)
+      *dot = 0;
+    int val = atoi(ip);
+    res |= (val << (i * 8));
+    if (dot)
+      ip = dot + 1;
+  }
+  return res;
 }

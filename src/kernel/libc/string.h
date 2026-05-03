@@ -11,6 +11,8 @@ char *strupper(char *str);
 size_t strlen(const char *str);
 void itoa(int num, char *str);
 char *strchr(const char *str, int c);
+char *strdup(const char *str);
+
 
 //
 // memory manipulation
