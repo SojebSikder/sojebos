@@ -1,6 +1,8 @@
 #ifndef APPS_H
 #define APPS_H
 
+#include "../kernel/libc/vector.h"
+
 typedef void (*AppFunc)(int argc, char *argv[]);
 
 typedef struct {
@@ -8,9 +10,7 @@ typedef struct {
   AppFunc func;
 } ConsoleApp;
 
-#define MAX_APPS 9
-extern ConsoleApp apps[MAX_APPS];
-extern int app_count;
+extern Vector apps_vector;
 
 void register_app(const char *name, AppFunc func);
 void register_all_apps();

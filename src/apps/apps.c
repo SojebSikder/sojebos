@@ -4,19 +4,32 @@
 #include "../apps/coreutils.h"
 #include "../apps/hello.h"
 #include "../apps/ping.h"
+#include "../apps/test.h"
+#include "../kernel/drivers/console.h"
+#include "../kernel/libc/vector.h"
 
-ConsoleApp apps[MAX_APPS];
-int app_count = 0;
+// Define the global vector instance
+Vector apps_vector;
 
 void register_app(const char *name, AppFunc func) {
-  if (app_count < MAX_APPS) {
-    apps[app_count].name = name;
-    apps[app_count].func = func;
-    app_count++;
+  ConsoleApp new_app;
+  new_app.name = name;
+  new_app.func = func;
+
+  if (!vector_push_back(&apps_vector, &new_app)) {
+    // Handle allocation failure gracefully
+    console_printf("Failed to register app '%s'\n", name);
   }
 }
 
 void register_all_apps() {
+  // Initialize the vector to hold 'ConsoleApp' elements.
+  // Starting with an initial capacity of 16 slots.
+  if (!vector_init(&apps_vector, 16, sizeof(ConsoleApp))) {
+    // Handle initialization failure
+    return;
+  }
+
   register_app("hello", hello_app);
   register_app("calc", calculator_app);
   register_app("clear", clear_app);
@@ -26,4 +39,5 @@ void register_all_apps() {
   register_app("rm", rm_app);
   register_app("df", disk_usage_app);
   register_app("ping", command_ping);
+  register_app("test", test_app);
 }

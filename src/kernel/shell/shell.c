@@ -6,9 +6,11 @@
 
 #include "../../apps/apps.h"
 #include "../drivers/console.h"
-#include "../libc/string.h"
 #include "../drivers/net/rtl8139.h"
+#include "../libc/string.h"
+#include "../libc/vector.h"
 
+extern Vector apps_vector;
 
 void shell_run() {
   char input[64];
@@ -56,9 +58,11 @@ void shell_run() {
 
     // Search for app by name
     int found = 0;
-    for (int i = 0; i < app_count; i++) {
-      if (strcmp(argv[0], apps[i].name) == 0) {
-        apps[i].func(argc, argv);
+    for (size_t i = 0; i < apps_vector.size; i++) {
+      ConsoleApp *app = (ConsoleApp *)vector_get(&apps_vector, i);
+
+      if (app && strcmp(argv[0], app->name) == 0) {
+        app->func(argc, argv);
         found = 1;
         break;
       }
