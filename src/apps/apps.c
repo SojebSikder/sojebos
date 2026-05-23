@@ -21,7 +21,7 @@ void register_app(const char *name, AppFunc func) {
 }
 
 void register_all_apps() {
-  if (!vector_init(&apps_vector, 2, sizeof(ConsoleApp))) {
+  if (!vector_init(&apps_vector, 16, sizeof(ConsoleApp))) {
     return;
   }
 

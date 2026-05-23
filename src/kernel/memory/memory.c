@@ -3,6 +3,7 @@
 //
 
 #include "memory.h"
+#include "../libc/string.h"
 #include <stdint.h>
 
 static MemoryBlock *free_list_head = NULL;
@@ -41,6 +42,71 @@ void *kmalloc(size_t size) {
     current = current->next;
   }
   return NULL; // Out of memory
+}
+
+void *krealloc(void *ptr, size_t size) {
+  // if ptr is NULL, then behave like kmalloc
+  if (!ptr) {
+    return kmalloc(size);
+  }
+
+  // if size is 0 and ptr is not NULL, then behave like kfree
+  if (size == 0) {
+    kfree(ptr);
+    return NULL;
+  }
+
+  size = ALIGN(size);
+  MemoryBlock *block = (MemoryBlock *)ptr - 1;
+
+  // if current block is big enough, return it as is
+  if (block->size >= size) {
+    return ptr;
+  }
+
+  // if current block is not big enough, try to combine it with the next block
+  if (block->next && block->next->free &&
+      (block->size + Block_SIZE + block->next->size) >= size) {
+
+    size_t combined_size = block->size + Block_SIZE + block->next->size;
+    MemoryBlock *next_next_block = block->next->next;
+
+    // allocate a new block and free the old one
+    if (combined_size >= (size + Block_SIZE + ALIGNMENT)) {
+      MemoryBlock *new_block =
+          (MemoryBlock *)((uint8_t *)block + Block_SIZE + size);
+      new_block->size = combined_size - size - Block_SIZE;
+      new_block->free = 1;
+
+      if (next_next_block && next_next_block->free) {
+        new_block->size += Block_SIZE + next_next_block->size;
+        new_block->next = next_next_block->next;
+      } else {
+        new_block->next = next_next_block;
+      }
+
+      block->size = size;
+      block->next = new_block;
+    } else {
+      block->size = combined_size;
+      block->next = next_next_block;
+    }
+    return ptr;
+  }
+
+  // no space to expand in-place, allocate a completely new block
+  void *new_ptr = kmalloc(size);
+  if (!new_ptr) {
+    return NULL; // out of memory, original pointer remains unchanged
+  }
+
+  // copy old data to new memory
+  memcpy(new_ptr, ptr, block->size);
+
+  // free the old block
+  kfree(ptr);
+
+  return new_ptr;
 }
 
 void kfree(void *ptr) {
