@@ -8,7 +8,6 @@
 #include "../kernel/drivers/console.h"
 #include "../kernel/libc/vector.h"
 
-// Define the global vector instance
 Vector apps_vector;
 
 void register_app(const char *name, AppFunc func) {
@@ -17,16 +16,12 @@ void register_app(const char *name, AppFunc func) {
   new_app.func = func;
 
   if (!vector_push_back(&apps_vector, &new_app)) {
-    // Handle allocation failure gracefully
     console_printf("Failed to register app '%s'\n", name);
   }
 }
 
 void register_all_apps() {
-  // Initialize the vector to hold 'ConsoleApp' elements.
-  // Starting with an initial capacity of 16 slots.
-  if (!vector_init(&apps_vector, 16, sizeof(ConsoleApp))) {
-    // Handle initialization failure
+  if (!vector_init(&apps_vector, 2, sizeof(ConsoleApp))) {
     return;
   }
 

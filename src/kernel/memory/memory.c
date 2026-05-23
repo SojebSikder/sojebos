@@ -52,15 +52,24 @@ void kfree(void *ptr) {
   MemoryBlock *block = (MemoryBlock *)ptr - 1;
   block->free = 1;
 
-  // simple coalescing: Merge with next block if it is also free
+  // Find the block immediately preceding our freed block
+  MemoryBlock *prev = NULL;
   MemoryBlock *current = free_list_head;
-  while (current) {
-    if (current) {
-      if (current->free && current->next && current->next->free) {
-        current->size += Block_SIZE + current->next->size;
-        current->next = current->next->next;
-      }
-      current = current->next;
-    }
+
+  while (current && current != block) {
+    prev = current;
+    current = current->next;
+  }
+
+  // Coalesce with the NEXT block if it is free
+  if (block->next && block->next->free) {
+    block->size += Block_SIZE + block->next->size;
+    block->next = block->next->next;
+  }
+
+  // Coalesce with the PREVIOUS block if it exists and is free
+  if (prev && prev->free) {
+    prev->size += Block_SIZE + block->size;
+    prev->next = block->next;
   }
 }
