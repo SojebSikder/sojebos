@@ -5,57 +5,58 @@
 
 typedef struct {
 
-    uint16_t bytes_per_sector;
-    uint8_t sectors_per_cluster;
-    uint16_t reserved_sector_count;
+  uint16_t bytes_per_sector;
+  uint8_t sectors_per_cluster;
+  uint16_t reserved_sector_count;
 
-    uint8_t num_fats;
-    uint32_t fat_size;
+  uint8_t num_fats;
+  uint32_t fat_size;
 
-    uint32_t root_cluster;
+  uint32_t root_cluster;
 
-    uint32_t first_data_sector;
+  uint32_t first_data_sector;
 
 } FAT32;
 
 typedef struct {
 
-    char name[11];
-    uint8_t attr;
-    uint8_t nt_reserved;
-    uint8_t create_time_tenth;
+  char name[11];
+  uint8_t attr;
+  uint8_t nt_reserved;
+  uint8_t create_time_tenth;
 
-    uint16_t create_time;
-    uint16_t create_date;
+  uint16_t create_time;
+  uint16_t create_date;
 
-    uint16_t access_date;
+  uint16_t access_date;
 
-    uint16_t first_cluster_high;
+  uint16_t first_cluster_high;
 
-    uint16_t write_time;
-    uint16_t write_date;
+  uint16_t write_time;
+  uint16_t write_date;
 
-    uint16_t first_cluster_low;
+  uint16_t first_cluster_low;
 
-    uint32_t file_size;
+  uint32_t file_size;
 
 } __attribute__((packed)) fat32_dir_entry;
 
 void fat32_init();
-void fat32_list_root();
-void fat32_cat(const char* filename);
+void fat32_ls();
+void fat32_cat(const char *filename);
 //
 // write file
 //
-void fat32_write_file(const char* filename, uint8_t* data, uint32_t size);
-void fat32_delete_file(const char* filename);
+void fat32_write_file(const char *filename, uint8_t *data, uint32_t size);
+void fat32_delete_file(const char *filename);
 void fat32_show_usage();
 
 //
 // directory operations
 //
-void fat32_create_directory(const char* dirname);
-void fat32_rmdir(const char* dirname);
+void fat32_create_directory(const char *dirname);
+void fat32_rmdir(const char *dirname);
+void fat32_cd(const char *path);
 
 
 #endif

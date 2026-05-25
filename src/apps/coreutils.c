@@ -65,3 +65,13 @@ void rmdir_app(int argc, char *argv[]) {
   vfs_rmdir(dirname);
   // console_print("Directory deleted successfully!\n");
 }
+
+void cd_app(int argc, char *argv[]) {
+  if (argc < 2) {
+    console_print("Usage: cd <path>\n");
+    return;
+  }
+
+  char *path = argv[1];
+  vfs_cd(path);
+}

@@ -5,6 +5,8 @@
 #include <stdint.h>
 
 static FAT32 fs;
+static uint32_t
+    current_dir_cluster; // tracks the current active directory cluster
 
 static uint32_t cluster_to_sector(uint32_t cluster) {
   return ((cluster - 2) * fs.sectors_per_cluster) + fs.first_data_sector;
@@ -38,6 +40,9 @@ void fat32_init() {
   fs.root_cluster = *(uint32_t *)(boot + 44);
 
   fs.first_data_sector = fs.reserved_sector_count + (fs.num_fats * fs.fat_size);
+
+  // default current working directory to root cluster
+  current_dir_cluster = fs.root_cluster;
 }
 
 // directory listing
@@ -72,9 +77,9 @@ static void print_name(char *name) {
   console_print("\n");
 }
 
-void fat32_list_root() {
+void fat32_ls() {
   uint8_t buffer[512];
-  uint32_t cluster = fs.root_cluster;
+  uint32_t cluster = current_dir_cluster;
 
   while (cluster >= 2 && cluster < 0x0FFFFFF8) {
     uint32_t sector_start = cluster_to_sector(cluster);
@@ -171,7 +176,7 @@ fat32_dir_entry *fat32_find_file(const char *filename) {
   format_filename(filename, search_name);
 
   uint8_t buffer[512];
-  uint32_t cluster = fs.root_cluster;
+  uint32_t cluster = current_dir_cluster;
 
   while (cluster >= 2 && cluster < 0x0FFFFFF8) {
     uint32_t sector_base = cluster_to_sector(cluster);
@@ -345,7 +350,7 @@ void fat32_write_file(const char *filename, uint8_t *data, uint32_t size) {
   }
 
   // Find a slot in the Root Directory (Iterating clusters and sectors)
-  uint32_t dir_cluster = fs.root_cluster;
+  uint32_t dir_cluster = current_dir_cluster;
   uint8_t dir_buffer[512];
 
   while (dir_cluster >= 2 && dir_cluster < 0x0FFFFFF8) {
@@ -544,11 +549,11 @@ void fat32_create_directory(const char *dirname) {
   // populate '.' and '..' inside this new cluster
   // TODO: assuming creation inside Root Directory for simplicity,
   // should adjust if creating in a subdirectory
-  init_directory_cluster(new_cluster, fs.root_cluster);
+  init_directory_cluster(new_cluster, current_dir_cluster);
 
   // find an empty slot in the parent directory (Root) to record this new
   // directory
-  uint32_t dir_cluster = fs.root_cluster;
+  uint32_t dir_cluster = current_dir_cluster;
   uint8_t dir_buffer[512];
 
   while (dir_cluster >= 2 && dir_cluster < 0x0FFFFFF8) {
@@ -680,5 +685,108 @@ void fat32_rmdir(const char *dirname) {
       }
     }
     cluster = fat32_next_cluster(cluster);
+  }
+}
+
+// helper function to extract the next token up to a '/'
+static int get_next_component(const char *path, int start_idx,
+                              char *component) {
+  int i = start_idx;
+  // skip leading slashes
+  while (path[i] == '/') {
+    i++;
+  }
+
+  int c_idx = 0;
+  while (path[i] != '/' && path[i] != '\0' && c_idx < 127) {
+    component[c_idx++] = path[i++];
+  }
+  component[c_idx] = '\0';
+  return i; // return the next index to continue parsing
+}
+
+// travarses a path string and returns the final directory's cluster number
+// returns 0xFFFFFFFF if the path is invalid or not found
+uint32_t fat32_get_path_cluster(const char *path) {
+  uint32_t cluster = current_dir_cluster;
+  int idx = 0;
+
+  // absolute path resolution check
+  if (path[0] == '/') {
+    cluster = fs.root_cluster;
+    idx = 1;
+  }
+
+  char component[128];
+  char formatted_search[11];
+  uint8_t buffer[512];
+
+  while (path[idx] != '\0') {
+    idx = get_next_component(path, idx, component);
+    if (component[0] == '\0') {
+      break; // no more components to process
+    }
+
+    format_filename(component, formatted_search);
+    int found = 0;
+    uint32_t run_cluster = cluster;
+
+    // search the current directory for this matching component
+    while (run_cluster >= 2 && run_cluster < 0x0FFFFFF8 && !found) {
+      uint32_t sector_start = cluster_to_sector(run_cluster);
+
+      for (uint8_t s = 0; s < fs.sectors_per_cluster; s++) {
+        disk_read(sector_start + s, buffer);
+        fat32_dir_entry *entries = (fat32_dir_entry *)buffer;
+
+        for (int i = 0; i < 16; i++) {
+          if (entries[i].name[0] == 0x00) {
+            break; // end of directory
+          }
+          if ((uint8_t)entries[i].name[0] == 0xE5) {
+            continue;
+          }
+          if (entries[i].attr == 0x0F) {
+            continue; // skip LFN entries
+          }
+
+          if (memcmp(entries[i].name, formatted_search, 11) == 0) {
+            // must be a directory
+            if ((entries[i].attr & ATTR_DIRECTORY) != 0) {
+              cluster = ((uint32_t)entries[i].first_cluster_high << 16) |
+                        entries[i].first_cluster_low;
+
+              // Root directory target cluster inside '.' or '..'
+              // is always written as 0
+              if (cluster == 0) {
+                cluster = fs.root_cluster;
+              }
+              found = 1;
+              break;
+            }
+          }
+        }
+        if (found) {
+          break;
+        }
+      }
+      if (found) {
+        break;
+      }
+      run_cluster = fat32_next_cluster(run_cluster);
+    }
+    if (!found) {
+      return 0xFFFFFFFF; // part of the path segment was not found
+    }
+  }
+  return cluster;
+}
+
+void fat32_cd(const char *path) {
+  uint32_t target_cluster = fat32_get_path_cluster(path);
+  if (target_cluster == 0xFFFFFFFF) {
+    console_print("cd: No such file or directory.\n");
+  } else {
+    current_dir_cluster = target_cluster;
   }
 }

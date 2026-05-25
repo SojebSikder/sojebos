@@ -2,16 +2,17 @@
 
 void vfs_init();
 void vfs_ls();
-void vfs_cat(const char* name);
+void vfs_cat(const char *name);
 //
 // file write
 //
-void vfs_write(const char* name, uint8_t* data, uint32_t size);
-void vfs_rm(const char* name);
+void vfs_write(const char *name, uint8_t *data, uint32_t size);
+void vfs_rm(const char *name);
 void vfs_usage();
 
 //
 // directory operations
 //
-void vfs_create_directory(const char* dirname);
-void vfs_rmdir(const char* dirname);
+void vfs_create_directory(const char *dirname);
+void vfs_rmdir(const char *dirname);
+void vfs_cd(const char *path);

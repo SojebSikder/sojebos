@@ -7,3 +7,4 @@ void disk_usage_app();
 // directory operations
 void mkdir_app(int argc, char *argv[]);
 void rmdir_app(int argc, char *argv[]);
+void cd_app(int argc, char *argv[]);
