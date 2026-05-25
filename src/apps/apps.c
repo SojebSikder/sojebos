@@ -36,6 +36,7 @@ void register_all_apps() {
   register_app("mkdir", mkdir_app);
   register_app("rmdir", rmdir_app);
   register_app("cd", cd_app);
+  register_app("pwd", pwd_app);
   register_app("ping", command_ping);
   register_app("test", test_app);
 }

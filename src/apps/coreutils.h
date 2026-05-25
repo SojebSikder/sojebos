@@ -8,3 +8,4 @@ void disk_usage_app();
 void mkdir_app(int argc, char *argv[]);
 void rmdir_app(int argc, char *argv[]);
 void cd_app(int argc, char *argv[]);
+void pwd_app();

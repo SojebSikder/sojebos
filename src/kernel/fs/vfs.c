@@ -25,3 +25,5 @@ void vfs_create_directory(const char *dirname) {
 void vfs_rmdir(const char *dirname) { fat32_rmdir(dirname); }
 
 void vfs_cd(const char *path) { fat32_cd(path); }
+
+void vfs_pwd() { fat32_pwd(); }

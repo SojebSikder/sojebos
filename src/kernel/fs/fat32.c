@@ -4,6 +4,9 @@
 #include "disk.h"
 #include <stdint.h>
 
+// sector size in bytes
+#define SECTOR_SIZE 512
+
 static FAT32 fs;
 static uint32_t
     current_dir_cluster; // tracks the current active directory cluster
@@ -386,7 +389,7 @@ void fat32_delete_file(const char *filename) {
   format_filename(filename, search_name);
 
   uint8_t dir_buffer[512];
-  uint32_t cluster = fs.root_cluster;
+  uint32_t cluster = current_dir_cluster;
 
   // Search for the file in the root directory
   while (cluster >= 2 && cluster < 0x0FFFFFF8) {
@@ -625,7 +628,7 @@ void fat32_rmdir(const char *dirname) {
   format_filename(dirname, search_name);
 
   uint8_t dir_buffer[512];
-  uint32_t cluster = fs.root_cluster;
+  uint32_t cluster = current_dir_cluster;
 
   while (cluster >= 2 && cluster < 0x0FFFFFF8) {
     uint32_t sector_start = cluster_to_sector(cluster);
@@ -789,4 +792,119 @@ void fat32_cd(const char *path) {
   } else {
     current_dir_cluster = target_cluster;
   }
+}
+
+static int find_dirname_in_parent(uint32_t parent_cluster,
+                                  uint32_t child_cluster, char *out_name) {
+  uint8_t buffer[512];
+  uint32_t cluster = parent_cluster;
+
+  while (cluster >= 2 && cluster < 0xFFFFFFF8) {
+    uint32_t sector_start = cluster_to_sector(cluster);
+
+    for (uint8_t s = 0; s < fs.sectors_per_cluster; s++) {
+      disk_read(sector_start + s, buffer);
+      fat32_dir_entry *entries = (fat32_dir_entry *)buffer;
+
+      for (int i = 0; i < 16; i++) {
+        if (entries[i].name[0] == 0x00) {
+          return 0; // end of directory
+        }
+        if ((uint8_t)entries[i].name[0] == 0xE5) {
+          continue;
+        }
+        if (entries[i].attr == 0x0F) {
+          continue; // skip LFN entries
+        }
+
+        // check if it's a directory entry matching out target cluster number
+        if ((entries[i].attr & ATTR_DIRECTORY) != 0) {
+          uint32_t entry_cluster =
+              ((uint32_t)entries[i].first_cluster_high << 16) |
+              entries[i].first_cluster_low;
+
+          // FAT32 treats 0 as the root directory within dot entries
+          if (entry_cluster == 0 && parent_cluster == fs.root_cluster) {
+            entry_cluster = fs.root_cluster;
+          }
+
+          if (entry_cluster == child_cluster) {
+            // extract name (up to 8 chars)
+            int out_idx = 0;
+            for (int k = 0; k < 8; k++) {
+              if (entries[i].name[k] != ' ') {
+                out_name[out_idx++] = entries[i].name[k];
+              }
+            }
+            out_name[out_idx] = '\0';
+            return 1;
+          }
+        }
+      }
+    }
+    cluster = fat32_next_cluster(cluster);
+  }
+  return 0;
+}
+
+void fat32_pwd() {
+  // if the current directory is the root directory
+  if (current_dir_cluster == fs.root_cluster) {
+    console_print("/\n");
+    return;
+  }
+
+  // max depth of 16 clusters (subdirectories)
+  uint32_t cluster_stack[16];
+  int stack_idx = 0;
+
+  uint32_t walk_cluster = current_dir_cluster;
+
+  // climb up to the root directory using '..' records
+  while (walk_cluster != fs.root_cluster && stack_idx < 16) {
+    cluster_stack[stack_idx++] = walk_cluster;
+
+    // read the current cluster's first sector to locate the '..' entry
+    uint8_t buffer[SECTOR_SIZE];
+    disk_read(cluster_to_sector(walk_cluster), buffer);
+    fat32_dir_entry *entries = (fat32_dir_entry *)buffer;
+
+    // verify that entries[1] is explicitly a '..' record
+    if (entries[1].name[0] == '.' && entries[1].name[1] == '.') {
+      uint32_t parent = ((uint32_t)entries[1].first_cluster_high << 16) |
+                        entries[1].first_cluster_low;
+
+      // per FAT32 spec, a parent value of 0 means the parent is the root
+      // cluster
+      if (parent == 0) {
+        parent = fs.root_cluster;
+      }
+
+      // avoid infinite loops by checking if the parent is the current cluster
+      if (parent == walk_cluster) {
+        break;
+      }
+      walk_cluster = parent;
+    } else {
+      console_print("Error: Directory structure corrupted ('..' missing).\n");
+      return;
+    }
+  }
+
+  // trace down from root and look up string components names
+  uint32_t parent = fs.root_cluster;
+  char name_buffer[256];
+
+  for (int i = stack_idx - 1; i >= 0; i--) {
+    uint32_t child = cluster_stack[i];
+    console_print("/");
+
+    if (find_dirname_in_parent(parent, child, name_buffer)) {
+      console_print(name_buffer);
+    } else {
+      console_print("???"); // fallback identifier for an orphaned cluster
+    }
+    parent = child;
+  }
+  console_print("\n");
 }

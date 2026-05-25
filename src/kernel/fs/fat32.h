@@ -57,6 +57,6 @@ void fat32_show_usage();
 void fat32_create_directory(const char *dirname);
 void fat32_rmdir(const char *dirname);
 void fat32_cd(const char *path);
-
+void fat32_pwd();
 
 #endif
