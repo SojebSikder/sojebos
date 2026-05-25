@@ -27,3 +27,14 @@ void vfs_rm(const char* name) {
 void vfs_usage() {
     fat32_show_usage();
 }
+
+//
+// directory operations
+//
+void vfs_create_directory(const char* dirname) {
+    fat32_create_directory(dirname);
+}
+
+void vfs_rmdir(const char* dirname) {
+    fat32_rmdir(dirname);
+}

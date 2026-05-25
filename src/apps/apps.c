@@ -33,6 +33,8 @@ void register_all_apps() {
   register_app("write", write_app);
   register_app("rm", rm_app);
   register_app("df", disk_usage_app);
+  register_app("mkdir", mkdir_app);
+  register_app("rmdir", rmdir_app);
   register_app("ping", command_ping);
   register_app("test", test_app);
 }

@@ -41,6 +41,27 @@ void rm_app(int argc, char *argv[]) {
   console_print("File deleted successfully!\n");
 }
 
-void disk_usage_app() {
-  vfs_usage();
+void disk_usage_app() { vfs_usage(); }
+
+// directory operations
+void mkdir_app(int argc, char *argv[]) {
+  if (argc < 2) {
+    console_print("Usage: mkdir <dirname>\n");
+    return;
+  }
+
+  char *dirname = argv[1];
+  vfs_create_directory(dirname);
+  // console_print("Directory created successfully!\n");
+}
+
+void rmdir_app(int argc, char *argv[]) {
+  if (argc < 2) {
+    console_print("Usage: rmdir <dirname>\n");
+    return;
+  }
+
+  char *dirname = argv[1];
+  vfs_rmdir(dirname);
+  // console_print("Directory deleted successfully!\n");
 }

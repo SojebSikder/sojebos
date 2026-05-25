@@ -473,3 +473,212 @@ void fat32_show_usage() {
   console_print(str_buf);
   console_print(" KB\n");
 }
+
+//
+// Directory operations
+//
+
+// this is the attribute value for a directory entry
+#define ATTR_DIRECTORY 0x10
+
+static void init_directory_cluster(uint32_t current_cluster,
+                                   uint32_t parent_cluster) {
+  uint8_t buffer[512];
+  // clear the sector buffer first
+  memset(buffer, 0, 512);
+
+  fat32_dir_entry *entries = (fat32_dir_entry *)buffer;
+
+  // create '.' entry
+  for (int i = 0; i < 11; i++) {
+    entries[0].name[i] = ' ';
+  }
+  entries[0].name[0] = '.';
+  entries[0].attr = ATTR_DIRECTORY;
+  entries[0].first_cluster_low = current_cluster & 0xFFFF;
+  entries[0].first_cluster_high = (current_cluster >> 16) & 0xFFFF;
+  entries[0].file_size = 0;
+
+  // create '..' entry
+  for (int i = 0; i < 11; i++) {
+    entries[1].name[i] = ' ';
+  }
+  entries[1].name[0] = '.';
+  entries[1].name[1] = '.';
+  entries[1].attr = ATTR_DIRECTORY;
+
+  // if the parent is the root directory, FAT32 specs state its cluster should
+  // be set to 0
+  uint32_t p_cluster = (parent_cluster == fs.root_cluster) ? 0 : parent_cluster;
+  entries[1].first_cluster_low = p_cluster & 0xFFFF;
+  entries[1].first_cluster_high = (p_cluster >> 16) & 0xFFFF;
+  entries[1].file_size = 0;
+
+  // write this initialization buffer to the first sector of the new cluster
+  uint32_t start_sector = cluster_to_sector(current_cluster);
+  disk_write(start_sector, buffer);
+
+  // zero out the remaining sectors in this cluster so old disk data doesn't
+  // corrupt it
+  memset(buffer, 0, 512);
+  for (uint8_t s = 1; s < fs.sectors_per_cluster; s++) {
+    disk_write(start_sector + s, buffer);
+  }
+}
+
+void fat32_create_directory(const char *dirname) {
+  // ensure it doesn't already exist
+  if (fat32_find_file(dirname) != 0) {
+    console_print("Directory or file already exists");
+    return;
+  }
+
+  // find and reserve a free cluster for the new directory data block
+  uint32_t new_cluster = fat32_find_free_cluster();
+  if (new_cluster == 0x0FFFFFFF) {
+    console_print("Error: Disk Full.\n");
+    return;
+  }
+  fat32_set_next_cluster(new_cluster, 0x0FFFFFFF); // mark as end of chain
+
+  // populate '.' and '..' inside this new cluster
+  // TODO: assuming creation inside Root Directory for simplicity,
+  // should adjust if creating in a subdirectory
+  init_directory_cluster(new_cluster, fs.root_cluster);
+
+  // find an empty slot in the parent directory (Root) to record this new
+  // directory
+  uint32_t dir_cluster = fs.root_cluster;
+  uint8_t dir_buffer[512];
+
+  while (dir_cluster >= 2 && dir_cluster < 0x0FFFFFF8) {
+    uint32_t sector_start = cluster_to_sector(dir_cluster);
+
+    for (uint8_t s = 0; s < fs.sectors_per_cluster; s++) {
+      disk_read(sector_start + s, dir_buffer);
+      fat32_dir_entry *entries = (fat32_dir_entry *)dir_buffer;
+
+      for (int i = 0; i < 16; i++) {
+        if (entries[i].name[0] == 0x00 || (uint8_t)entries[i].name[0] == 0xE5) {
+          // format and save directory configuration
+          format_filename(dirname, entries[i].name);
+          entries[i].attr = ATTR_DIRECTORY;
+          entries[i].first_cluster_low = new_cluster & 0xFFFF;
+          entries[i].first_cluster_high = (new_cluster >> 16) & 0xFFFF;
+          entries[i].file_size = 0;
+
+          disk_write(sector_start + s, dir_buffer);
+          console_print("Directory created successfully.\n");
+          return;
+        }
+      }
+    }
+  }
+}
+
+static int is_directory_empty(uint32_t dir_cluster) {
+  uint8_t buffer[512];
+  uint32_t cluster = dir_cluster;
+
+  while (cluster >= 2 && cluster < 0x0FFFFFF8) {
+    uint32_t sector_start = cluster_to_sector(cluster);
+
+    for (uint8_t s = 0; s < fs.sectors_per_cluster; s++) {
+      disk_read(sector_start + s, buffer);
+      fat32_dir_entry *entries = (fat32_dir_entry *)buffer;
+
+      for (int i = 0; i < 16; i++) {
+        // if it's a completely unallocated slot, we can stop evaluating
+        if (entries[i].name[0] == 0x00) {
+          continue;
+        }
+        if ((uint8_t)entries[i].name[0] == 0xE5) {
+          continue; // skip deleted items
+        }
+        if (entries[i].attr == 0x0F) {
+          continue; // skip LFN
+        }
+
+        // if name is "." or "..", it's a standard boiler-plate directory logic
+        if (entries[i].name[0] == '.' &&
+            (entries[i].name[1] == ' ' ||
+             (entries[i].name[1] == '.' && entries[i].name[2] == ' '))) {
+          continue;
+        }
+
+        // if we hit any other active file/folder, the directory isn't empty
+        return 0;
+      }
+    }
+    cluster = fat32_next_cluster(cluster);
+  }
+  return 1;
+}
+
+void fat32_rmdir(const char *dirname) {
+  char search_name[11];
+  format_filename(dirname, search_name);
+
+  uint8_t dir_buffer[512];
+  uint32_t cluster = fs.root_cluster;
+
+  while (cluster >= 2 && cluster < 0x0FFFFFF8) {
+    uint32_t sector_start = cluster_to_sector(cluster);
+
+    for (uint8_t s = 0; s < fs.sectors_per_cluster; s++) {
+      uint32_t current_sector = sector_start + s;
+      disk_read(current_sector, dir_buffer);
+      fat32_dir_entry *entries = (fat32_dir_entry *)dir_buffer;
+
+      for (int i = 0; i < 16; i++) {
+        if (entries[i].name[0] == 0x00) {
+          return; // directoryt end
+        }
+        if ((uint8_t)entries[i].name[0] == 0xE5) {
+          continue;
+        }
+
+        // match name string
+        int match = 1;
+        for (int j = 0; j < 11; j++) {
+          if (entries[i].name[j] != search_name[j]) {
+            match = 0;
+            break;
+          }
+        }
+
+        if (match) {
+          // check if it's actually a directory
+          if ((entries[i].attr & 0x10) == 0) {
+            console_print("Error: Target path is a file, not a directory.\n");
+            return;
+          }
+
+          uint32_t cluster_to_free =
+              ((uint32_t)entries[i].first_cluster_high << 16) |
+              entries[i].first_cluster_low;
+
+          // check if it's empty
+          if (!is_directory_empty(cluster_to_free)) {
+            console_print("Error: Directory is not empty.\n");
+            return;
+          }
+
+          // clear the FAT space allocation
+          while (cluster_to_free >= 2 && cluster_to_free < 0x0FFFFFF8) {
+            uint32_t next = fat32_next_cluster(cluster_to_free);
+            fat32_set_next_cluster(cluster_to_free, 0x00000000);
+            cluster_to_free = next;
+          }
+
+          // flag directory record status as deleted
+          entries[i].name[0] = 0xE5;
+          disk_write(current_sector, dir_buffer);
+          console_print("Directory deleted successfully.\n");
+          return;
+        }
+      }
+    }
+    cluster = fat32_next_cluster(cluster);
+  }
+}

@@ -3,3 +3,7 @@ void cat_app();
 void write_app(int argc, char *argv[]);
 void rm_app(int argc, char *argv[]);
 void disk_usage_app();
+
+// directory operations
+void mkdir_app(int argc, char *argv[]);
+void rmdir_app(int argc, char *argv[]);

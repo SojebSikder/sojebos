@@ -51,4 +51,11 @@ void fat32_write_file(const char* filename, uint8_t* data, uint32_t size);
 void fat32_delete_file(const char* filename);
 void fat32_show_usage();
 
+//
+// directory operations
+//
+void fat32_create_directory(const char* dirname);
+void fat32_rmdir(const char* dirname);
+
+
 #endif
