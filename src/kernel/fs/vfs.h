@@ -16,3 +16,4 @@ void vfs_usage();
 void vfs_create_directory(const char *dirname);
 void vfs_rmdir(const char *dirname);
 void vfs_cd(const char *path);
+void vfs_pwd();

@@ -75,3 +75,5 @@ void cd_app(int argc, char *argv[]) {
   char *path = argv[1];
   vfs_cd(path);
 }
+
+void pwd_app() { vfs_pwd(); }
