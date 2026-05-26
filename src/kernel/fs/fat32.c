@@ -147,6 +147,19 @@ void format_filename(const char *input, char *output) {
     output[i] = ' ';
   }
 
+  // explicitly handle '.' (current directory)
+  if (input[0] == '.' && input[1] == '\0') {
+    output[0] = '.';
+    return;
+  }
+
+  // explicitly handle '..' (parent directory)
+  if (input[0] == '.' && input[1] == '.' && input[2] == '\0') {
+    output[0] = '.';
+    output[1] = '.';
+    return;
+  }
+
   int i = 0;
   int out_idx = 0;
 
