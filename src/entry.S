@@ -57,3 +57,6 @@ gdt_flush:
 
 .flush:
     ret
+
+# This tells the GNU linker that our kernel does not require an executable stack.
+.section .note.GNU-stack,"",@progbits
