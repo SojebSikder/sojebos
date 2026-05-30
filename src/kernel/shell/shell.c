@@ -9,6 +9,7 @@
 #include "../drivers/net/rtl8139.h"
 #include "../libc/string.h"
 #include "../libc/vector.h"
+#include "../process/process.h"
 
 extern Vector apps_vector;
 
@@ -69,7 +70,13 @@ void shell_run() {
     }
 
     if (!found) {
-      console_print("Command not found!\n");
+      int status = exec_elf(argv[0]);
+
+      if (status >= 0) {
+        found = 1;
+      } else {
+        console_print("Command or file not found!\n");
+      }
     }
   }
 }
