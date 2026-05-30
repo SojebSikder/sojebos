@@ -15,6 +15,11 @@ SojebOS is a basic operating system
 ```bash
 # Install dependencies
 sudo apt install build-essential nasm mtools xorriso grub-pc-bin grub-common
+
+# Create disk image (first time only)
+make createdisk
+# Add files to the disk image
+make addfiles
 # Build
 make
 # Run 
