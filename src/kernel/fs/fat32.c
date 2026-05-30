@@ -1,4 +1,5 @@
 #include "fat32.h"
+#include "vfs.h"
 #include "../drivers/console.h"
 #include "../libc/string.h"
 #include "disk.h"
@@ -920,4 +921,105 @@ void fat32_pwd() {
     parent = child;
   }
   console_print("\n");
+}
+
+/**
+ * Reads an arbitrary chunk of data from a file at a specific offset.
+ * Bridges your FAT chain traversal to a classic POSIX style read interface.
+ */
+uint32_t fat32_read_absolute(uint32_t start_cluster, uint32_t offset, uint32_t size, uint8_t *buffer) {
+    uint32_t bytes_per_cluster = fs.sectors_per_cluster * 512;
+    uint32_t cluster = start_cluster;
+
+    // Traverse clusters to reach the cluster matching our target offset
+    while (offset >= bytes_per_cluster) {
+        cluster = fat32_next_cluster(cluster);
+        if (cluster < 2 || cluster >= 0x0FFFFFF8) {
+            return 0; // Out of bounds or invalid link
+        }
+        offset -= bytes_per_cluster;
+    }
+
+    // Read loop for data retrieval
+    uint32_t total_read = 0;
+    uint8_t sector_buffer[512];
+
+    while (size > 0 && cluster >= 2 && cluster < 0x0FFFFFF8) {
+        uint32_t sector_base = cluster_to_sector(cluster);
+
+        // Find which sector in the current cluster matches our remaining offset
+        uint32_t sector_index = offset / 512;
+        uint32_t sector_offset = offset % 512;
+
+        for (uint8_t s = sector_index; s < fs.sectors_per_cluster && size > 0; s++) {
+            disk_read(sector_base + s, sector_buffer);
+
+            // Determine bytes to safely extract from this specific sector chunk
+            uint32_t chunk = 512 - sector_offset;
+            if (chunk > size) {
+                chunk = size;
+            }
+
+            // Copy data over to VFS stream buffer output target
+            memcpy(buffer + total_read, sector_buffer + sector_offset, chunk);
+
+            total_read += chunk;
+            size -= chunk;
+            offset = 0; // Clear offset once aligned on subsequent runs
+            sector_offset = 0;
+        }
+
+        // Move along chain links
+        cluster = fat32_next_cluster(cluster);
+    }
+
+    return total_read;
+}
+
+// Forward declarations matching the signature requirements inside your `vfs.h`
+static uint32_t fat32_vfs_read(vfs_node_t *node, uint32_t offset, uint32_t size, uint8_t *buffer) {
+    if (!node) return 0;
+
+    // Bounds check to avoid hunting past file limits
+    if (offset >= node->size) return 0;
+    if (offset + size > node->size) {
+        size = node->size - offset;
+    }
+
+    // Track original cluster location stored in node inode metadata structure field
+    uint32_t initial_cluster = node->inode;
+    return fat32_read_absolute(initial_cluster, offset, size, buffer);
+}
+
+static void fat32_vfs_close(vfs_node_t *node) {
+    // No explicit memory cleanups required per file node tracking structure instance here.
+    (void)node;
+}
+
+/**
+ * @brief Searches the file layout and builds the VFS Object reference profile
+ * Used by your abstract vfs_open function hook.
+ */
+int fat32_file_lookup(const char *filename, vfs_node_t *out_node) {
+    fat32_dir_entry *entry = fat32_find_file(filename);
+    if (!entry) {
+        return -1; // File entry target missing from table record sequence
+    }
+
+    // Capture values into abstract format properties
+    strncpy(out_node->name, filename, 255);
+    out_node->size = entry->file_size;
+
+    // Stitch high and low cluster references together into our inode tracking index
+    out_node->inode = ((uint32_t)entry->first_cluster_high << 16) | entry->first_cluster_low;
+
+    // Evaluate if targeted file context flag defines a directory instance structure
+    out_node->flags = (entry->attr & ATTR_DIRECTORY) ? VFS_DIRECTORY : VFS_FILE;
+
+    // Attach function pointer hooks dynamically!
+    out_node->read = fat32_vfs_read;
+    out_node->write = NULL; // Map to your fat32_write structure blocks when ready
+    out_node->close = fat32_vfs_close;
+
+    return 0; // Completed successfully
 }

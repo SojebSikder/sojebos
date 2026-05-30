@@ -1,4 +1,5 @@
 #include "paging.h"
+#include "../libc/string.h"
 
 // aligning to 4096 bytes (Page boundary) is strict
 __attribute__((aligned(4096))) uint32_t page_directory[1024];
@@ -19,7 +20,7 @@ static void bitmap_set(uint32_t frame_idx) {
 }
 
 static void bitmap_clear(uint32_t frame_idx) {
-  frame_bitmap[frame_idx / 32] &= !(1 << (frame_idx % 32));
+  frame_bitmap[frame_idx / 32] &= ~(1 << (frame_idx % 32));
 }
 
 // test if a bit is set
@@ -80,8 +81,8 @@ void paging_init(uint32_t kernel_end_paddr) {
 
     // put the page table into the page directory
     // 0x3 = Present | Read/Write
-    page_directory[table_idx] =
-        ((uint32_t)first_page_tables[table_idx]) | (PAGE_PRESENT | PAGE_RW);
+    page_directory[table_idx] = ((uint32_t)first_page_tables[table_idx]) |
+                                (PAGE_PRESENT | PAGE_RW | PAGE_USER);
   }
 
   // register page directory with the CPU and toggle the CR0 register bit
@@ -119,7 +120,7 @@ void map_page(void *physaddr, void *virtualaddr, uint32_t flags) {
 
     // map the new page table into our directory
     page_directory[pd_idx] =
-        ((uint32_t)page_table) | PAGE_PRESENT | PAGE_RW | PAGE_USER;
+        ((uint32_t)page_table) | (PAGE_PRESENT | PAGE_RW | PAGE_USER);
   }
 
   // map the physical page address to the page table with requested flags
@@ -129,4 +130,37 @@ void map_page(void *physaddr, void *virtualaddr, uint32_t flags) {
   // Whenever modify an existing page active page table mapping,
   // we must invalidate the CPU's TLB cache for that specific address
   asm volatile("invlpg (%0)" ::"r"(vaddr) : "memory");
+}
+
+// Maps a contiguous block of user memory into the virtual address space
+void paging_map_user_memory(uint32_t virtual_address, uint32_t size) {
+    if (size == 0) return;
+
+    // Calculate the page-aligned starting address (round down to nearest 4KB boundary)
+    uint32_t start_vaddr = virtual_address & ~(PAGE_SIZE - 1);
+
+    // Calculate the page-aligned ending address (round up to include any partial trailing page)
+    uint32_t end_vaddr = (virtual_address + size + PAGE_SIZE - 1) & ~(PAGE_SIZE - 1);
+
+    // Combine permissions: Present on disk, Read/Write enabled, and Ring 3 User accessible
+    uint32_t user_flags = PAGE_PRESENT | PAGE_RW | PAGE_USER;
+
+    for (uint32_t vaddr = start_vaddr; vaddr < end_vaddr; vaddr += PAGE_SIZE) {
+        // Allocate a fresh, unallocated physical memory frame
+        void *phys_frame = alloc_frame();
+
+        if (!phys_frame) {
+            // Kernel Out-Of-Memory fallback.
+            // In a basic monolithic design, we log or loop halt if allocation fails.
+            continue;
+        }
+
+        // Clear out any junk data left behind in the physical frame
+        // to prevent data leaks between previous and current processes.
+        // (Note: Since paging is enabled, we map it first or zero it via identity-mapped address if low memory)
+        memset(phys_frame, 0, PAGE_SIZE);
+
+        // Register the new mapping link inside your page directories/tables
+        map_page(phys_frame, (void *)vaddr, user_flags);
+    }
 }

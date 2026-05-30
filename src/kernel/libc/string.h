@@ -12,6 +12,7 @@ size_t strlen(const char *str);
 void itoa(int num, char *str);
 char *strchr(const char *str, int c);
 char *strdup(const char *str);
+void strncpy(char *dest, const char *src, size_t n);
 
 
 //

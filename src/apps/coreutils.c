@@ -24,8 +24,7 @@ void write_app(int argc, char *argv[]) {
   char *content = argv[2];
   uint32_t size = strlen(content);
 
-  // write to vfs
-  vfs_write(filename, (uint8_t *)content, size);
+  vfs_write_temp(filename, (uint8_t *)content, size);
   console_print("File written successfully!\n");
 }
 
@@ -52,7 +51,6 @@ void mkdir_app(int argc, char *argv[]) {
 
   char *dirname = argv[1];
   vfs_create_directory(dirname);
-  // console_print("Directory created successfully!\n");
 }
 
 void rmdir_app(int argc, char *argv[]) {
@@ -63,7 +61,6 @@ void rmdir_app(int argc, char *argv[]) {
 
   char *dirname = argv[1];
   vfs_rmdir(dirname);
-  // console_print("Directory deleted successfully!\n");
 }
 
 void cd_app(int argc, char *argv[]) {

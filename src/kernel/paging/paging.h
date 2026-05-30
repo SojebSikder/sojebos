@@ -18,4 +18,10 @@ void map_page(void *physaddr, void *virtualaddr, uint32_t flags);
 void *alloc_frame();
 void free_frame(void *physaddr);
 
+/**
+ * Allocates physical frames and maps a block of virtual memory
+ * with User-level (Ring 3) privileges.
+ */
+void paging_map_user_memory(uint32_t virtual_address, uint32_t size);
+
 #endif

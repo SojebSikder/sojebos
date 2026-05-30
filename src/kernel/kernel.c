@@ -9,6 +9,7 @@
 #include "gdt/tss.h"
 #include "memory/memory.h"
 #include "paging/paging.h"
+#include "process/process.h"
 #include <stddef.h>
 #include <stdint.h>
 
@@ -52,6 +53,17 @@ void __attribute__((section(".text.kernel_main"))) kernel_main() {
 
   // Register apps
   register_all_apps();
+
+  // // Test executing an ELF binary packaged
+  // console_print("Launching init process...\n");
+  // // int status = exec_elf("/bin/init.elf");
+  // int status = exec_elf("sojeb.elf");
+
+  // if (status < 0) {
+  //   console_print(
+  //       "Failed to run execution engine. Defaulting to fallback shell.\n");
+  //   shell_run();
+  // }
 
   // Find and Init the Network Card
   uint32_t rtl_io = pci_find_rtl8139();

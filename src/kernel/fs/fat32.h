@@ -1,6 +1,7 @@
 #ifndef FAT32_H
 #define FAT32_H
 
+#include "vfs.h"
 #include <stdint.h>
 
 typedef struct {
@@ -58,5 +59,7 @@ void fat32_create_directory(const char *dirname);
 void fat32_rmdir(const char *dirname);
 void fat32_cd(const char *path);
 void fat32_pwd();
+
+int fat32_file_lookup(const char *filename, vfs_node_t *out_node);
 
 #endif
