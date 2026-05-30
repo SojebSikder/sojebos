@@ -8,6 +8,7 @@
 #include "gdt/gdt.h"
 #include "gdt/tss.h"
 #include "memory/memory.h"
+#include "paging/paging.h"
 #include <stddef.h>
 #include <stdint.h>
 
@@ -16,11 +17,15 @@ extern uint8_t _kernel_end[];
 
 void __attribute__((section(".text.kernel_main"))) kernel_main() {
   // Initialize Memory allocator first
-  // Let's give the heap 4MB of space starting after kernel
   void *heap_start = (void *)_kernel_end;
   size_t heap_size = 4 * 1024 * 1024; // 4MB
 
   kheap_init(heap_start, heap_size);
+
+  // Initialize paging
+  // this maps the kernel + 4MB heap safely into identity mapped virtual pages
+  uint32_t total_kernel_memory_end = (uint32_t)heap_start + heap_size;
+  paging_init(total_kernel_memory_end);
 
   // Initialize GDT
   gdt_init();
@@ -32,6 +37,7 @@ void __attribute__((section(".text.kernel_main"))) kernel_main() {
 
   // init file system
   vfs_init();
+
   // print welcome message
   console_clear();
   console_print("\n");
